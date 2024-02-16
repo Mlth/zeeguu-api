@@ -3,10 +3,10 @@ import sys
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage
-# import pandas as pd
+import pandas as pd
 from zeeguu.core.model import db
-# import matplotlib.pyplot as plt
-# import numpy as np
+import matplotlib.pyplot as plt
+#import numpy as np
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
@@ -69,7 +69,9 @@ def isArticleLiked():
             (articleData[article]['duration'] / averageShouldSpend ) 
             * (articleData[article]['difficulty'] / user_level.cefr_level)
         )
-    return articleData
+
+    df = pd.DataFrame.from_dict(articleData, orient='index')
+    return df
 
 print("before the function")
 print(isArticleLiked())
@@ -89,7 +91,7 @@ print(isArticleLiked())
 
 # print("before test")
 
-#conn = db.engine.raw_connection()
+conn = db.engine.raw_connection()
 
 query = """
     SELECT * from user_reading_session urs
@@ -124,7 +126,7 @@ upper_bound = True
 lower_bound = True
 
 y_start = 50
-""" 
+
 df = pd.read_sql_query(query, conn)
 #df.to_csv(sys.stdout, index=False)
 df.astype('int32').dtypes
@@ -148,7 +150,7 @@ plt.show()
 
 conn.close()
 
-print("after test") """
+print("after test") 
 
 '''
 def initialize_all_focused_durations():
