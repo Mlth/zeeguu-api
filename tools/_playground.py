@@ -7,7 +7,8 @@ import pandas as pd
 from zeeguu.core.model import db
 import matplotlib.pyplot as plt
 import numpy as np
-import pyarrow as pa # needed for pandas 
+import pyarrow as pa # needed for pandas
+from datetime import datetime
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
@@ -15,6 +16,16 @@ from zeeguu.core.model.user_reading_session import UserReadingSession
 app = create_app()
 app.app_context().push()
 
+def days_since_to_opacity(days_since):
+    if days_since < 365 * 1/4:
+        return 1
+    elif days_since < 365 * 2/4:
+        return 0.75
+    elif days_since < 365 * 3/4:
+        return 0.5
+    elif days_since < 365:
+        return 0.25
+    return 0
 
 def translated_words_per_article(userId, articleId):
     activitySession = UserActivityData.query.filter_by(user_id=userId, article_id=articleId).all()
@@ -28,25 +39,25 @@ def get_expected_reading_time(word_count):
     return (word_count / 70) * 60
 
 def plot_urs_with_duration_and_word_count(df, file_name):
-    x_min, x_max = 200, 400
-    y_min, y_max = 200, 400
+    x_min, x_max = 0, 2000
+    y_min, y_max = 0, 2000
 
-    df.plot(kind = 'scatter', x = 'word_count', y = 'user_duration', color='blue')
+    df.plot(kind = 'scatter', x = 'word_count', y = 'user_duration')
+
+    plt.scatter(df['word_count'], df['user_duration'], alpha=[days_since_to_opacity(d) for d in df['days_since']], color='blue')
 
     x_values = df['word_count']
     y_values_line = [get_expected_reading_time(x) - 120 for x in x_values]
-    plt.scatter(df['word_count'], df['user_duration'], label='Data Points')
     plt.plot(x_values, y_values_line, color='red', label='y = ')
 
     x_values = df['word_count']
     y_values_line = [get_expected_reading_time(x) + 120 for x in x_values]
-    plt.scatter(df['word_count'], df['user_duration'], label='Data Points')
     plt.plot(x_values, y_values_line, color='red', label='y = ')
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
 
     plt.savefig(file_name + '.png')
-    print("Has been saved")
+    print("Saving file: " + file_name + ".png")
     plt.show()
 
 # This function makes a dataframe for one user with 
@@ -75,7 +86,7 @@ def isArticleLiked():
 
     averageReadingTime = 70 # wpm
     
-    readingSession = ( 
+    readingSession = (
         UserReadingSession.query
             .filter_by(user_id=user)
             .filter(UserReadingSession.article_id.isnot(None))
@@ -84,6 +95,7 @@ def isArticleLiked():
             .order_by(UserReadingSession.article_id.asc())
             .all()
     )
+    
     for session in readingSession:
         articleId = session.article_id
         article = Article.find_by_id(articleId)
@@ -97,7 +109,8 @@ def isArticleLiked():
                 'word_count': article.word_count,
                 'wpm': 0,
                 #'expectedWpm': 0,
-                'haveRead': 0
+                'haveRead': 0,
+                'days_since': (datetime.now() - session.start_time).days,
             }
         else:
             articleData[articleId]['user_duration'] += sessionDuration
