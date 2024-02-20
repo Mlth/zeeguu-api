@@ -2,7 +2,7 @@ import sys
 
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
-from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage
+from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData
 import pandas as pd
 from zeeguu.core.model import db
 import matplotlib.pyplot as plt
@@ -15,6 +15,40 @@ from zeeguu.core.model.user_reading_session import UserReadingSession
 app = create_app()
 app.app_context().push()
 
+
+def translated_words_per_article(userId, articleId):
+    activitySession = UserActivityData.query.filter_by(user_id=userId, article_id=articleId).all()
+    count = 0
+    for activity in activitySession:
+        if activity.event == "UMR - TRANSLATE TEXT":
+            count += 1
+    return count
+
+def get_expected_reading_time(word_count):
+    return (word_count / 70) * 60
+
+def plot_urs_with_duration_and_word_count(df, file_name):
+    x_min, x_max = 200, 400
+    y_min, y_max = 200, 400
+
+    df.plot(kind = 'scatter', x = 'word_count', y = 'user_duration', color='blue')
+
+    x_values = df['word_count']
+    y_values_line = [get_expected_reading_time(x) - 120 for x in x_values]
+    plt.scatter(df['word_count'], df['user_duration'], label='Data Points')
+    plt.plot(x_values, y_values_line, color='red', label='y = ')
+
+    x_values = df['word_count']
+    y_values_line = [get_expected_reading_time(x) + 120 for x in x_values]
+    plt.scatter(df['word_count'], df['user_duration'], label='Data Points')
+    plt.plot(x_values, y_values_line, color='red', label='y = ')
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
+
+    plt.savefig(file_name + '.png')
+    print("Has been saved")
+    plt.show()
+
 # This function makes a dataframe for one user with 
 def isArticleLiked():
     user = 534
@@ -22,7 +56,8 @@ def isArticleLiked():
 
     articleData = {}
 
-    language_data = {
+    # Not using this, new information found, average reading time for learners is lower.
+    """ language_data = {
     2: {'name': 'Danish', 'avrt': 204}, # taken from norwegian
     3: {'name': 'German', 'avrt': 179},
     5: {'name': 'English', 'avrt': 228},
@@ -36,47 +71,67 @@ def isArticleLiked():
     18: {'name': 'Swedish', 'avrt': 204}, # taken from norwegian
     19: {'name': 'Russian', 'avrt': 180}, # i made it
     23: {'name': 'Hungarian', 'avrt': 161}, # taken from finnish
-    }
+    } """
 
- 
+    averageReadingTime = 70 # wpm
+    
     readingSession = ( 
         UserReadingSession.query
             .filter_by(user_id=user)
             .filter(UserReadingSession.article_id.isnot(None))
+            .filter(UserReadingSession.duration >= 30000) # 30 seconds
+            .filter(UserReadingSession.duration <= 3600000) # 1 hour
             .order_by(UserReadingSession.article_id.asc())
-            .limit(100)
+            .all()
     )
     for session in readingSession:
         articleId = session.article_id
         article = Article.find_by_id(articleId)
-        sessionDuration = int(session.duration) / 1000
+        sessionDuration = int(session.duration) / 1000 # in seconds
+
         if articleId not in articleData:
             articleData[articleId] = {
-                'duration': sessionDuration,
+                'user_duration': sessionDuration,
                 'language': article.language_id,
                 'difficulty': article.fk_difficulty,
-                'wordCount': article.word_count,
-                'likeScore': 0
+                'word_count': article.word_count,
+                'wpm': 0,
+                #'expectedWpm': 0,
+                'haveRead': 0
             }
         else:
-            articleData[articleId]['duration'] += sessionDuration
-
+            articleData[articleId]['user_duration'] += sessionDuration
     
     for article in articleData:
-        user_level = UserLanguage.query.filter_by(user_id = user, language_id=articleData[article]['language']).first()
-        averageShouldSpend = articleData[article]['wordCount'] / language_data[articleData[article]['language']]['avrt']
-       
+        # Not using this right now, but it could be useful
+        # user_level = UserLanguage.query.filter_by(user_id = user, language_id=articleData[article]['language']).first()
+        averageShouldSpendReading = get_expected_reading_time(articleData[article]['word_count'])
 
-        articleData[article]['likeScore'] = int( 
+        timesTranslated = translated_words_per_article(user, article)
+        userDurationWithTranslated = articleData[article]['user_duration'] - (timesTranslated * 3)
+ 
+        userReadWpm = articleData[article]['word_count'] / (userDurationWithTranslated / 60)
+
+        articleData[article]['wpm'] = userReadWpm
+        articleData[article]['expectedWpm'] = averageShouldSpendReading
+        
+        if (70 - 20) <= userReadWpm and userReadWpm <= (70 + 20):
+            articleData[article]['haveRead'] = 1
+        else:
+            articleData[article]['haveRead'] = 0
+
+        # not using atm
+        """ articleData[article]['likeScore'] = int( 
             (articleData[article]['duration'] / averageShouldSpend ) 
             * (articleData[article]['difficulty'] / user_level.cefr_level)
-        )
+        ) """
 
     df = pd.DataFrame.from_dict(articleData, orient='index')
     return df
 
 print("before the function")
-print(isArticleLiked())
+plot_urs_with_duration_and_word_count(isArticleLiked(), "oscar_test")
+#print(translated_words_per_article(534, 294067))
 
 # print("before the for")
 """ for id in User.all_recent_user_ids(150):
@@ -128,7 +183,7 @@ upper_bound = True
 lower_bound = True
 
 y_start = 50
-
+"""
 df = pd.read_sql_query(query, conn)
 #df.to_csv(sys.stdout, index=False)
 df.astype('int32').dtypes
@@ -150,12 +205,8 @@ plt.savefig('test.png')
 print("Has been saved")
 plt.show()
 
-
+"""
 conn.close()
-
-
-
-
 print("after test")
 
 '''
