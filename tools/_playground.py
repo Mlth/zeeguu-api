@@ -6,7 +6,8 @@ from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Art
 import pandas as pd
 from zeeguu.core.model import db
 import matplotlib.pyplot as plt
-#import numpy as np
+import numpy as np
+import pyarrow as pa # needed for pandas 
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
@@ -149,9 +150,13 @@ plt.savefig('test.png')
 print("Has been saved")
 plt.show()
 
+
 conn.close()
 
-print("after test") 
+
+
+
+print("after test")
 
 '''
 def initialize_all_focused_durations():
