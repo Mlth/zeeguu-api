@@ -14,7 +14,7 @@ from zeeguu.core.model.user_reading_session import UserReadingSession
 app = create_app()
 app.app_context().push()
 
-
+# This function makes a dataframe for one user with 
 def isArticleLiked():
     user = 534
     
@@ -22,7 +22,7 @@ def isArticleLiked():
     articleData = {}
 
     language_data = {
-    2: {'name': 'Danish', 'avrt': 204},
+    2: {'name': 'Danish', 'avrt': 204}, # taken from norwegian
     3: {'name': 'German', 'avrt': 179},
     5: {'name': 'English', 'avrt': 228},
     7: {'name': 'French', 'avrt': 195},
@@ -32,11 +32,12 @@ def isArticleLiked():
     10: {'name': 'Norwegian', 'avrt': 204},
     11: {'name': 'Portuguese', 'avrt': 181},
     13: {'name': 'Polish', 'avrt': 166},
-    18: {'name': 'Swedish', 'avrt': 204},
-    19: {'name': 'Russian', 'avrt': 180},
-    23: {'name': 'Hungarian', 'avrt': 161},
+    18: {'name': 'Swedish', 'avrt': 204}, # taken from norwegian
+    19: {'name': 'Russian', 'avrt': 180}, # i made it
+    23: {'name': 'Hungarian', 'avrt': 161}, # taken from finnish
     }
 
+ 
     readingSession = ( 
         UserReadingSession.query
             .filter_by(user_id=user)
