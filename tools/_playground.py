@@ -11,26 +11,37 @@ import pyarrow as pa # needed for pandas
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
+from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
+from zeeguu.core.content_recommender.elastic_recommender import article_search_for_user
 
 app = create_app()
 app.app_context().push()
 
-'''
-print("before the for")
-for id in User.all_recent_user_ids(150):
-    u = User.find_by_id(id)
-    print(u.name)
-    duration_old = exercises_duration_by_day(u)
-    duration_new = exercises_duration_by_day(u)
-    if duration_new != duration_old:
-        print("old way")
-        print(duration_old)
-        print("new way")
-        print(duration_new)
-'''
 
 print("before test")
+u = User.find_by_id(1)
+print(u.name)
+lan = u.learned_language
 
+res = ElasticQuery(
+    10,
+    "cake",
+    "sports, politics",
+    "",
+    "",
+    "",
+    lan,
+    10,
+    1
+)
+print (res)
+
+res = article_search_for_user(u, 10, 1)
+
+print(res)
+
+
+'''
 conn = db.engine.raw_connection()
 
 query = """
@@ -70,26 +81,26 @@ y_start = 50
 df = pd.read_sql_query(query, conn)
 #df.to_csv(sys.stdout, index=False)
 df.astype('int32').dtypes
-df.plot(kind = 'scatter', x = 'duration', y = 'word_count', color='blue')
+#df.plot(kind = 'scatter', x = 'duration', y = 'word_count', color='blue')
 
-if upper_bound:
-    x_values = df['duration']
-    y_values_line = 20 * x_values + y_start
-    plt.scatter(df['duration'], df['word_count'], label='Data Points')
-    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-
+#if upper_bound:
+#    x_values = df['duration']
+#    y_values_line = 20 * x_values + y_start
+#    plt.scatter(df['duration'], df['word_count'], label='Data Points')
+#    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
 if lower_bound:
     x_values = df['duration']
     y_values_line = [y_start] * len(x_values)
     plt.scatter(df['duration'], df['word_count'], label='Data Points')
     plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-
-plt.savefig('test.png')
-print("Has been saved")
-plt.show()
+'''
 
 
-conn.close()
+#plt.savefig('test.png')
+#plt.show()
+
+
+#conn.close()
 
 
 
