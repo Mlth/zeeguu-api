@@ -8,7 +8,7 @@ from zeeguu.core.model import db
 import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow as pa # needed for pandas
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
@@ -64,7 +64,6 @@ def plot_urs_with_duration_and_word_count(df, file_name):
 def isArticleLiked():
     user = 534
     
-
     articleData = {}
 
     # Not using this, new information found, average reading time for learners is lower.
@@ -92,6 +91,7 @@ def isArticleLiked():
             .filter(UserReadingSession.article_id.isnot(None))
             .filter(UserReadingSession.duration >= 30000) # 30 seconds
             .filter(UserReadingSession.duration <= 3600000) # 1 hour
+            .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
             .order_by(UserReadingSession.article_id.asc())
             .all()
     )
