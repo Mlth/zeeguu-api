@@ -2,7 +2,7 @@ import sys
 
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
-from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData
+from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData, UserArticle
 import pandas as pd
 from zeeguu.core.model import db
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ def plot_urs_with_duration_and_word_count(df, have_read_sessions, file_name):
     plt.xlabel('Word count')
     plt.ylabel('Duration')
 
-    dot_color = np.where(df['haveRead'] == 1, 'blue', 'red')
+    dot_color = np.where(df['liked'] == 1, 'blue', 'red')
     plt.scatter(df['word_count'], df['user_duration'], alpha=[days_since_to_opacity(d) for d in df['days_since']], color=dot_color)
 
     x_values = df['word_count']
@@ -71,8 +71,8 @@ def plot_urs_with_duration_and_word_count(df, have_read_sessions, file_name):
 
     have_read_ratio = have_read_sessions / len(df) * 100
     have_not_read_ratio = 100 - have_read_ratio
-    plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
-    plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
+    plt.text(0, 1.1, f"Have liked: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
+    plt.text(0, 1.05, f"Have not liked: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
 
     plt.savefig(file_name + '.png')
     print("Saving file: " + file_name + ".png")
@@ -85,7 +85,6 @@ def get_all_user_reading_sessions():
 
     query_data = (
         UserReadingSession.query
-            .filter_by(user_id='534')
             .filter(UserReadingSession.article_id.isnot(None))
             .filter(UserReadingSession.duration >= 30000) # 30 seconds
             .filter(UserReadingSession.duration <= 3600000) # 1 hour
@@ -99,7 +98,9 @@ def get_all_user_reading_sessions():
         user_id = session.user_id
         article = Article.find_by_id(article_id)
         session_duration = int(session.duration) / 1000 # in seconds
-
+        liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
+        liked_value = 0 if liked == (False,) or liked is None else 1 # should check out
+        
         if (user_id, article_id) not in sessions:
             sessions[(user_id, article_id)] = {
                 'user_id': user_id,
@@ -108,7 +109,7 @@ def get_all_user_reading_sessions():
                 'language': article.language_id,
                 'difficulty': article.fk_difficulty,
                 'word_count': article.word_count,
-                'haveRead': 0,
+                'liked': liked_value,
                 'days_since': (datetime.now() - session.start_time).days,
             }
         else:
@@ -121,15 +122,25 @@ def get_all_user_reading_sessions():
         should_spend_reading_lower_bound = get_expected_reading_time(sessions[session]['word_count'], 20)
         should_spend_reading_upper_bound = get_expected_reading_time(sessions[session]['word_count'], -20)
 
+        #user_level = UserLanguage.query.filter_by(user_id = user_id, language_id=sessions[(user_id, article_id)]['language']).first()
+
+    
+
         timesTranslated = translated_words_per_article(user_id, article_id)
         userDurationWithTranslated = sessions[session]['user_duration'] - (timesTranslated * 3)
+        sessions[session]['user_duration'] = userDurationWithTranslated
         
-        if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound:
+        if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
+            have_read_sessions += 1
+            sessions[session]['liked'] = 1
+        elif sessions[session]['liked'] == 1:
             have_read_sessions += 1
             sessions[session]['haveRead'] = 1
             liked_sessions.append(sessions[session])
         else:
-            sessions[session]['haveRead'] = 0
+            continue
+
+    #df = pd.DataFrame.from_dict(sessions, orient='index')
 
     return sessions, liked_sessions, have_read_sessions
 
@@ -137,12 +148,20 @@ def session_map_to_df(sessions):
     df = pd.DataFrame.from_dict(sessions, orient='index')
     return df
 
-def get_df_and_plot_user_reading_sessions():
+def session_list_to_df(sessions):
+    df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'haveRead', 'days_since'])
+    return df
+
+def get_dfs():
     sessions, liked_sessions, have_read_sessions = get_all_user_reading_sessions()
+
     df = session_map_to_df(sessions)
-    liked_df = pd.DataFrame(liked_sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'haveRead', 'days_since'])
+    liked_df = session_list_to_df(liked_sessions)
+
+    return df, liked_df, have_read_sessions
+
+def plot_df(df, have_read_sessions):
     plot_urs_with_duration_and_word_count(df, have_read_sessions, "test")
-    return df, liked_df
 
 def build_sparse_tensor(df):
     indices = df[['user_id', 'article_id']].values
@@ -160,7 +179,11 @@ def print_sparse_tensor(tensor):
 
 print("before the function")
 
-df, liked_df = get_df_and_plot_user_reading_sessions()
+#Getting and plotting the data frames. We plot the df with all values (also non-observed), since we want the graph to show all user-article pairs (user_reading_sessions)
+df, liked_df, have_read_sessions = get_dfs()
+plot_df(df, have_read_sessions)
+
+# We build the tensor with only the data frame containing the liked articles. This is because the tensor should be sparse, and only contain the interesting data.
 tensor = build_sparse_tensor(liked_df)
 print_sparse_tensor(tensor)
 
