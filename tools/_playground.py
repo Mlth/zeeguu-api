@@ -72,12 +72,31 @@ def plot_urs_with_duration_and_word_count(df, have_read_sessions, file_name):
     print("Saving file: " + file_name + ".png")
     plt.show()
 
+def switch_difficulty(number):
+    result = 0
+
+    if 0 <= number <= 10:
+        result = 1
+    elif 11 <= number <= 20:
+        result = 2
+    elif 21 <= number <= 30:
+        result = 3
+    elif 31 <= number <= 40:
+        result = 4
+    elif 41 <= number <= 50:
+        result = 5
+    elif 51 <= number <= 100:
+        result = 6
+
+    return result
+
 def get_all_user_reading_sessions():
     sessions = {}
     have_read_sessions = 0
 
     query_data = (
         UserReadingSession.query
+            #.filter_by(user_id = 534)
             .filter(UserReadingSession.article_id.isnot(None))
             .filter(UserReadingSession.duration >= 30000) # 30 seconds
             .filter(UserReadingSession.duration <= 3600000) # 1 hour
@@ -113,13 +132,34 @@ def get_all_user_reading_sessions():
         should_spend_reading_lower_bound = get_expected_reading_time(sessions[session]['word_count'], 20)
         should_spend_reading_upper_bound = get_expected_reading_time(sessions[session]['word_count'], -20)
 
-        #user_level = UserLanguage.query.filter_by(user_id = user_id, language_id=sessions[(user_id, article_id)]['language']).first()
+        user_level = UserLanguage.query.filter_by(user_id = user_id, language_id=sessions[(user_id, article_id)]['language']).filter(UserLanguage.cefr_level.isnot(None)).with_entities(UserLanguage.cefr_level).first()
+        if user_level is None or user_level[0] == 0 or user_level[0] is None or user_level[0] == [] or user_level == []:
+            usr_lvl = 1
+        else:
+            usr_lvl = user_level[0]
+        
+        #print(sessions[(user_id, article_id)]['language'], usr_lvl)
+      
 
+
+        diff = sessions[session]['difficulty']
+
+
+        calcDiff = switch_difficulty(diff)
+        
+        
+        if calcDiff > usr_lvl:
+            diff = 1 + ((calcDiff - usr_lvl) / 10)
+        elif calcDiff < usr_lvl:
+            diff = 1 - ((usr_lvl - calcDiff) / 10)
+        else:
+            diff = 1
     
+        
 
         timesTranslated = translated_words_per_article(user_id, article_id)
-        userDurationWithTranslated = sessions[session]['user_duration'] - (timesTranslated * 3)
-        sessions[session]['user_duration'] = userDurationWithTranslated
+        userDurationWithTranslated = (sessions[session]['user_duration'] - (timesTranslated * 3)) # * diff
+        sessions[session]['user_duration'] = userDurationWithTranslated 
         
         if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
             have_read_sessions += 1
