@@ -488,3 +488,7 @@ class Article(db.Model):
     @classmethod
     def with_title_containing(cls, needle):
         return cls.query.filter(cls.title.like(f"%{needle}%")).all()
+
+    @classmethod
+    def num_of_articles(cls):
+        return cls.query.count()

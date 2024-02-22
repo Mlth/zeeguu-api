@@ -9,12 +9,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow as pa # needed for pandas
 from datetime import datetime, timedelta
+import tensorflow as tf
+tf = tf.compat.v1
+tf.disable_v2_behavior()
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
 
 app = create_app()
 app.app_context().push()
+
+print("Running playground")
 
 def days_since_to_opacity(days_since):
     if days_since < 365 * 1/4:
@@ -92,6 +98,7 @@ def switch_difficulty(number):
 
 def get_all_user_reading_sessions():
     sessions = {}
+    liked_sessions = []
     have_read_sessions = 0
 
     query_data = (
@@ -115,6 +122,8 @@ def get_all_user_reading_sessions():
         
         if (user_id, article_id) not in sessions:
             sessions[(user_id, article_id)] = {
+                'user_id': user_id,
+                'article_id': article_id,
                 'user_duration': session_duration,
                 'language': article.language_id,
                 'difficulty': article.fk_difficulty,
@@ -166,105 +175,56 @@ def get_all_user_reading_sessions():
             sessions[session]['liked'] = 1
         elif sessions[session]['liked'] == 1:
             have_read_sessions += 1
+            sessions[session]['haveRead'] = 1
+            liked_sessions.append(sessions[session])
         else:
             continue
 
     #df = pd.DataFrame.from_dict(sessions, orient='index')
 
-    return sessions, have_read_sessions
+    return sessions, liked_sessions, have_read_sessions
 
-#print(get_all_user_reading_sessions())
-
-def get_df_and_plot_user_reading_sessions():
-    sessions, have_read_sessions = get_all_user_reading_sessions()
+def session_map_to_df(sessions):
     df = pd.DataFrame.from_dict(sessions, orient='index')
+    return df
+
+def session_list_to_df(sessions):
+    df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'haveRead', 'days_since'])
+    return df
+
+def get_dfs():
+    sessions, liked_sessions, have_read_sessions = get_all_user_reading_sessions()
+
+    df = session_map_to_df(sessions)
+    liked_df = session_list_to_df(liked_sessions)
+
+    return df, liked_df, have_read_sessions
+
+def plot_df(df, have_read_sessions):
     plot_urs_with_duration_and_word_count(df, have_read_sessions, "test")
-    return df
 
-# This function makes a dataframe for one user with 
-def isArticleLiked():
-    user = 534
-    
-    articleData = {}
-
-    # Not using this, new information found, average reading time for learners is lower.
-    """ language_data = {
-        2: {'name': 'Danish', 'avrt': 204}, # taken from norwegian
-        3: {'name': 'German', 'avrt': 179},
-        5: {'name': 'English', 'avrt': 228},
-        7: {'name': 'French', 'avrt': 195},
-        6: {'name': 'Spanish', 'avrt': 218},
-        8: {'name': 'Italian', 'avrt': 188},
-        9: {'name': 'Dutch', 'avrt': 202},
-        10: {'name': 'Norwegian', 'avrt': 204},
-        11: {'name': 'Portuguese', 'avrt': 181},
-        13: {'name': 'Polish', 'avrt': 166},
-        18: {'name': 'Swedish', 'avrt': 204}, # taken from norwegian
-        19: {'name': 'Russian', 'avrt': 180}, # i made it
-        23: {'name': 'Hungarian', 'avrt': 161}, # taken from finnish
-    } """
-
-    averageReadingTime = 70 # wpm
-    
-    readingSession = (
-        UserReadingSession.query
-            .filter_by(user_id=user)
-            .filter(UserReadingSession.article_id.isnot(None))
-            .filter(UserReadingSession.duration >= 30000) # 30 seconds
-            .filter(UserReadingSession.duration <= 3600000) # 1 hour
-            .order_by(UserReadingSession.article_id.asc())
-            .all()
+def build_sparse_tensor(df):
+    indices = df[['user_id', 'article_id']].values
+    values = df['haveRead'].values
+    num_of_users = User.num_of_users()
+    num_of_articles = Article.num_of_articles()
+    return tf.SparseTensor(
+        indices=indices,
+        values=values,
+        dense_shape=[num_of_users, num_of_articles]
     )
-    
-    for session in readingSession:
-        articleId = session.article_id
-        article = Article.find_by_id(articleId)
-        sessionDuration = int(session.duration) / 1000 # in seconds
 
-        if articleId not in articleData:
-            articleData[articleId] = {
-                'user_duration': sessionDuration,
-                'language': article.language_id,
-                'difficulty': article.fk_difficulty,
-                'word_count': article.word_count,
-                'wpm': 0,
-                #'expectedWpm': 0,
-                'haveRead': 0,
-                'days_since': (datetime.now() - session.start_time).days,
-            }
-        else:
-            articleData[articleId]['user_duration'] += sessionDuration
-    
-    for article in articleData:
-        # Not using this right now, but it could be useful
-        # user_level = UserLanguage.query.filter_by(user_id = user, language_id=articleData[article]['language']).first()
-        averageShouldSpendReading = get_expected_reading_time(articleData[article]['word_count'], 0)
-
-        timesTranslated = translated_words_per_article(user, article)
-        userDurationWithTranslated = articleData[article]['user_duration'] - (timesTranslated * 3)
- 
-        userReadWpm = articleData[article]['word_count'] / (userDurationWithTranslated / 60)
-
-        articleData[article]['wpm'] = userReadWpm
-        articleData[article]['expectedWpm'] = averageShouldSpendReading
-        
-        if (70 - 20) <= userReadWpm and userReadWpm <= (70 + 20):
-            articleData[article]['haveRead'] = 1
-        else:
-            articleData[article]['haveRead'] = 0
-
-        # not using atm
-        """ articleData[article]['likeScore'] = int( 
-            (articleData[article]['duration'] / averageShouldSpend ) 
-            * (articleData[article]['difficulty'] / user_level.cefr_level)
-        ) """
-
-    df = pd.DataFrame.from_dict(articleData, orient='index')
-    return df
+def print_sparse_tensor(tensor):
+    print(tf.sparse.to_dense(tensor))
 
 print("before the function")
 
-get_df_and_plot_user_reading_sessions()
-#plot_urs_with_duration_and_word_count(isArticleLiked(), "oscar_test")
+#Getting and plotting the data frames. We plot the df with all values (also non-observed), since we want the graph to show all user-article pairs (user_reading_sessions)
+df, liked_df, have_read_sessions = get_dfs()
+plot_df(df, have_read_sessions)
+
+# We build the tensor with only the data frame containing the liked articles. This is because the tensor should be sparse, and only contain the interesting data.
+tensor = build_sparse_tensor(liked_df)
+print_sparse_tensor(tensor)
 
 print("after test")
