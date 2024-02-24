@@ -2,8 +2,9 @@ from zeeguu.core.model.article import Article
 from zeeguu.core.model.user import User
 from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
+from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
-from zeeguu.recommender.utils import get_expected_reading_time
+from zeeguu.recommender.utils import get_diff_in_article_and_user_level, get_expected_reading_time, switch_difficulty
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
@@ -71,11 +72,19 @@ class FeedbackMatrix:
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session]['word_count'], 20)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session]['word_count'], -20)
 
-            #user_level = UserLanguage.query.filter_by(user_id = user_id, language_id=sessions[(user_id, article_id)]['language']).first()
+            user_level = UserLanguage.query.filter_by(user_id = user_id, language_id=sessions[(user_id, article_id)]['language']).filter(UserLanguage.cefr_level.isnot(None)).with_entities(UserLanguage.cefr_level).first()
+            if user_level is None or user_level[0] == 0 or user_level[0] is None or user_level[0] == [] or user_level == []:
+                usr_lvl = 1
+            else:
+                usr_lvl = user_level[0]
 
+            diff = sessions[session]['difficulty']
+            calcDiff = switch_difficulty(diff)
+            diff = get_diff_in_article_and_user_level(calcDiff, usr_lvl)
+        
             timesTranslated = UserActivityData.translated_words_for_article(user_id, article_id)
-            userDurationWithTranslated = sessions[session]['user_duration'] - (timesTranslated * 3)
-            sessions[session]['user_duration'] = userDurationWithTranslated
+            userDurationWithTranslated = (sessions[session]['user_duration'] - (timesTranslated * 3)) # * diff
+            sessions[session]['user_duration'] = userDurationWithTranslated 
             
             if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
                 have_read_sessions += 1
@@ -83,6 +92,15 @@ class FeedbackMatrix:
             elif sessions[session]['liked'] == 1:
                 have_read_sessions += 1
                 sessions[session]['haveRead'] = 1
+                liked_sessions.append(sessions[session])
+            else:
+                continue
+            if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
+                have_read_sessions += 1
+                sessions[session]['liked'] = 1
+                liked_sessions.append(sessions[session])
+            elif sessions[session]['liked'] == 1:
+                have_read_sessions += 1
                 liked_sessions.append(sessions[session])
             else:
                 continue
@@ -161,7 +179,7 @@ class FeedbackMatrix:
     def print_tensor(self):
         print(tf.sparse.to_dense(self.tensor))
 
-    def __days_since_to_multiplier(days_since):
+    def __days_since_to_multiplier(self, days_since):
         if days_since < 365 * 1/4:
             return 1
         elif days_since < 365 * 2/4:
