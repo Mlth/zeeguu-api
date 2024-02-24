@@ -324,3 +324,14 @@ class UserActivityData(db.Model):
             UserReadingSession.update_reading_session(
                 session, event, user.id, article_id, current_time=time
             )
+
+    @classmethod
+    def translated_words_for_article(cls, user_id, article_id):
+        activitySession = cls.query.filter_by(user_id=user_id, article_id=article_id).all()
+        count = 0
+
+        for activity in activitySession:
+            if activity.event == "UMR - TRANSLATE TEXT":
+                count += 1
+        
+        return count
