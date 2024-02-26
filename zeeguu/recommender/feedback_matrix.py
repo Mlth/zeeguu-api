@@ -1,4 +1,5 @@
 from zeeguu.core.model.article import Article
+from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
 from zeeguu.core.model.user import User
 from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
@@ -50,6 +51,8 @@ class FeedbackMatrix:
             session_duration = int(session.duration) / 1000 # in seconds
             liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
             liked_value = 0 if liked == (False,) or liked is None else 1 # should check out
+            difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
+            difficulty_feedback_value = 0 if difficulty_feedback is None else int(difficulty_feedback[0])
             
             if (user_id, article_id) not in sessions:
                 sessions[(user_id, article_id)] = {
@@ -61,12 +64,12 @@ class FeedbackMatrix:
                     'word_count': article.word_count,
                     'expected_read': 0,
                     'liked': liked_value,
-                    'df_feedback': 0,
+                    'df_feedback': difficulty_feedback_value,
                     'days_since': (datetime.now() - session.start_time).days,
                 }
             else:
                 sessions[(user_id, article_id)]['user_duration'] += session_duration
-        
+
         for session in sessions.keys():
             user_id = session[0]
             article_id = session[1]
@@ -88,12 +91,9 @@ class FeedbackMatrix:
             userDurationWithTranslated = (sessions[session]['user_duration'] - (timesTranslated * 3)) * diff
             sessions[session]['user_duration'] = userDurationWithTranslated 
             
-            if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
+            if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound:
                 have_read_sessions += 1
                 sessions[session]['expected_read'] = 1
-            elif sessions[session]['expected_read'] == 1:
-                have_read_sessions += 1
-                liked_sessions.append(sessions[session])
             else:
                 continue
 
@@ -107,8 +107,10 @@ class FeedbackMatrix:
         plt.xlabel('Word count')
         plt.ylabel('Duration')
 
-        dot_color = np.where(df['expected_read'] == 1, 'blue', 'red')
-        plt.scatter(df['word_count'], df['user_duration'], alpha=[self.__days_since_to_multiplier(d) for d in df['days_since']], color=dot_color)
+        expected_read_color = np.where(df['liked'] == 1, 'green', 
+                                    np.where(df['df_feedback'] != 0, np.where(df['df_feedback'] == 1, 'yellow', np.where(df['df_feedback'] == 3, 'cyan', 'black')),
+                                        np.where(df['expected_read'] == 1, 'blue', 'red')))
+        plt.scatter(df['word_count'], df['user_duration'], alpha=[self.__days_since_to_multiplier(d) for d in df['days_since']], color=expected_read_color)
 
         x_values = df['word_count']
         y_values_line = [get_expected_reading_time(x, -20) for x in x_values]
