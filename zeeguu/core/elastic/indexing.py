@@ -45,19 +45,16 @@ def create_or_update(article, session):
 
     if es.exists(index=ES_ZINDEX, id=article.id):
        es.delete(index=ES_ZINDEX, id=article.id)
-    else:
-        res = es.index(index=ES_ZINDEX, id=article.id, body=doc)
+       
+    res = es.index(index=ES_ZINDEX, id=article.id, body=doc)
 
     return res
 
 def index_all_articles(session):
-    articles_to_index = Article.all_younger_than(100)
-    count = 0
+    articles_to_index = Article.all_older_than(0)
     for article in articles_to_index:
-        count += 1
-        print(count)
         create_or_update(article, session)
-        break
+        
 
 def index_in_elasticsearch(new_article, session):
     """
