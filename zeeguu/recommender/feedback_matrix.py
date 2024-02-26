@@ -59,7 +59,9 @@ class FeedbackMatrix:
                     'language': article.language_id,
                     'difficulty': article.fk_difficulty,
                     'word_count': article.word_count,
+                    'expected_read': 0,
                     'liked': liked_value,
+                    'df_feedback': 0,
                     'days_since': (datetime.now() - session.start_time).days,
                 }
             else:
@@ -88,8 +90,8 @@ class FeedbackMatrix:
             
             if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
                 have_read_sessions += 1
-                sessions[session]['liked'] = 1
-            elif sessions[session]['liked'] == 1:
+                sessions[session]['expected_read'] = 1
+            elif sessions[session]['expected_read'] == 1:
                 have_read_sessions += 1
                 sessions[session]['haveRead'] = 1
                 liked_sessions.append(sessions[session])
@@ -97,9 +99,9 @@ class FeedbackMatrix:
                 continue
             if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
                 have_read_sessions += 1
-                sessions[session]['liked'] = 1
+                sessions[session]['expected_read'] = 1
                 liked_sessions.append(sessions[session])
-            elif sessions[session]['liked'] == 1:
+            elif sessions[session]['expected_read'] == 1:
                 have_read_sessions += 1
                 liked_sessions.append(sessions[session])
             else:
@@ -114,7 +116,7 @@ class FeedbackMatrix:
         plt.xlabel('Word count')
         plt.ylabel('Duration')
 
-        dot_color = np.where(df['liked'] == 1, 'blue', 'red')
+        dot_color = np.where(df['expected_read'] == 1, 'blue', 'red')
         plt.scatter(df['word_count'], df['user_duration'], alpha=[self.__days_since_to_multiplier(d) for d in df['days_since']], color=dot_color)
 
         x_values = df['word_count']
@@ -132,8 +134,8 @@ class FeedbackMatrix:
 
         have_read_ratio = have_read_sessions / len(df) * 100
         have_not_read_ratio = 100 - have_read_ratio
-        plt.text(0, 1.1, f"Have liked: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
-        plt.text(0, 1.05, f"Have not liked: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
+        plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
+        plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
 
         plt.savefig(file_name + '.png')
         print("Saving file: " + file_name + ".png")
