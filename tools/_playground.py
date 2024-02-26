@@ -40,9 +40,9 @@ print (res)
 
 index_all_articles(db.session)
 
-res2 = article_recommendations_for_user(u, 10)
+#es2 = article_recommendations_for_user(u, 10)
 
-print(res2)
+#print(res2)
 
 
 '''
@@ -109,7 +109,6 @@ if lower_bound:
 
 
 
-print("after test")
 
 '''
 def initialize_all_focused_durations():

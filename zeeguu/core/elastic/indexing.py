@@ -1,7 +1,7 @@
 from zeeguu.core.model import Topic
 from zeeguu.core.model.article import Article, article_topic_map
 from zeeguu.core.model.difficulty_lingo_rank import DifficultyLingoRank
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 
 
@@ -32,7 +32,7 @@ def document_from_article(article, session):
         "language": article.language.name,
         "fk_difficulty": article.fk_difficulty,
         "lr_difficulty": DifficultyLingoRank.value_for_article(article),
-        "url": article.url.as_string(),
+        "url": article.url.as_string() if article.url else '', #fix for AttributeError: 'NoneType' object has no attribute 'as_string'
         "video": article.video,
     }
     return doc
@@ -50,11 +50,19 @@ def create_or_update(article, session):
 
     return res
 
-def index_all_articles(session):
+def index_all_articles_helper(session):
     articles_to_index = Article.all_older_than(0)
     for article in articles_to_index:
-        create_or_update(article, session)
-        
+         doc = document_from_article(article, session)
+         yield {
+             "_index": ES_ZINDEX,
+             "_id": article.id,
+             "_source": doc,
+         }
+         
+def index_all_articles(session):
+    es = Elasticsearch(ES_CONN_STRING)
+    helpers.bulk(es, index_all_articles_helper(session))
 
 def index_in_elasticsearch(new_article, session):
     """
