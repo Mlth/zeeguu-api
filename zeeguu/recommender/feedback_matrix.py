@@ -83,7 +83,7 @@ class FeedbackMatrix:
             diff = get_diff_in_article_and_user_level(calcDiff, usr_lvl)
         
             timesTranslated = UserActivityData.translated_words_for_article(user_id, article_id)
-            userDurationWithTranslated = (sessions[session]['user_duration'] - (timesTranslated * 3)) # * diff
+            userDurationWithTranslated = (sessions[session]['user_duration'] - (timesTranslated * 3)) * diff
             sessions[session]['user_duration'] = userDurationWithTranslated 
             
             if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
@@ -91,19 +91,10 @@ class FeedbackMatrix:
                 sessions[session]['liked'] = 1
             elif sessions[session]['liked'] == 1:
                 have_read_sessions += 1
-                sessions[session]['haveRead'] = 1
                 liked_sessions.append(sessions[session])
             else:
                 continue
-            if userDurationWithTranslated <= should_spend_reading_upper_bound and userDurationWithTranslated >= should_spend_reading_lower_bound and sessions[session]['liked'] == 0:
-                have_read_sessions += 1
-                sessions[session]['liked'] = 1
-                liked_sessions.append(sessions[session])
-            elif sessions[session]['liked'] == 1:
-                have_read_sessions += 1
-                liked_sessions.append(sessions[session])
-            else:
-                continue
+
 
         return sessions, liked_sessions, have_read_sessions
 
@@ -158,7 +149,7 @@ class FeedbackMatrix:
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.calc_dfs()
         indices = self.sessions_df[['user_id', 'article_id']].values
-        values = self.sessions_df['haveRead'].values
+        values = self.sessions_df['liked'].values
         num_of_users = User.num_of_users()
         num_of_articles = Article.num_of_articles()
         tensor = tf.SparseTensor(
@@ -173,7 +164,7 @@ class FeedbackMatrix:
         return df
 
     def __session_list_to_df(self, sessions):
-        df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'haveRead', 'days_since'])
+        df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'liked', 'days_since'])
         return df
 
     def print_tensor(self):
