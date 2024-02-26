@@ -1,5 +1,5 @@
 from zeeguu.core.model import Topic
-from zeeguu.core.model.article import article_topic_map
+from zeeguu.core.model.article import Article, article_topic_map
 from zeeguu.core.model.difficulty_lingo_rank import DifficultyLingoRank
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
@@ -44,12 +44,20 @@ def create_or_update(article, session):
     doc = document_from_article(article, session)
 
     if es.exists(index=ES_ZINDEX, id=article.id):
-        es.delete(index=ES_ZINDEX, id=article.id)
-
-    res = es.index(index=ES_ZINDEX, id=article.id, body=doc)
+       es.delete(index=ES_ZINDEX, id=article.id)
+    else:
+        res = es.index(index=ES_ZINDEX, id=article.id, body=doc)
 
     return res
 
+def index_all_articles(session):
+    articles_to_index = Article.all_younger_than(100)
+    count = 0
+    for article in articles_to_index:
+        count += 1
+        print(count)
+        create_or_update(article, session)
+        break
 
 def index_in_elasticsearch(new_article, session):
     """
