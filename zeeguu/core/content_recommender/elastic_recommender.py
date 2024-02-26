@@ -124,10 +124,11 @@ def article_recommendations_for_user(
         es_decay,
         es_weight,
     )
-
-    es = Elasticsearch(ES_CONN_STRING)
+    print(ES_CONN_STRING)
+    print("here!\n")
+    es = Elasticsearch("http://localhost:9200")
     res = es.search(index=ES_ZINDEX, body=query_body)
-
+    print("done with conn")
     hit_list = res["hits"].get("hits")
     final_article_mix.extend(_to_articles_from_ES_hits(hit_list))
 

@@ -12,7 +12,7 @@ import pyarrow as pa # needed for pandas
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
-from zeeguu.core.content_recommender.elastic_recommender import article_search_for_user
+from zeeguu.core.content_recommender.elastic_recommender import article_recommendations_for_user
 
 app = create_app()
 app.app_context().push()
@@ -36,9 +36,9 @@ res = ElasticQuery(
 )
 print (res)
 
-res = article_search_for_user(u, 10, 1)
+res2 = article_recommendations_for_user(u, 10)
 
-print(res)
+print(res2)
 
 
 '''
