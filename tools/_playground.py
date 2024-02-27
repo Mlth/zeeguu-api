@@ -1,8 +1,4 @@
 import sys
-
-from elasticsearch import Elasticsearch
-from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
-from zeeguu.core.model import UserExerciseSession, User
 import pandas as pd
 from zeeguu.core.model import db
 import matplotlib.pyplot as plt
@@ -11,9 +7,7 @@ import pyarrow as pa # needed for pandas
 
 from zeeguu.api.app import create_app
 from zeeguu.core.candidate_pool_generator.candidate_generator import build_candidate_pool_for_lang
-from zeeguu.core.content_recommender.elastic_recommender import article_recommendations_for_user, article_search_for_user
-from zeeguu.core.elastic.indexing import index_all_articles
-from zeeguu.core.model import Language
+
 
 app = create_app()
 app.app_context().push()
@@ -94,7 +88,7 @@ index_all_articles(db.session)
 #print(res2)
 
 
-'''
+
 conn = db.engine.raw_connection()
 
 query = """
@@ -147,7 +141,7 @@ if lower_bound:
     y_values_line = [y_start] * len(x_values)
     plt.scatter(df['duration'], df['word_count'], label='Data Points')
     plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-'''
+
 
 
 #plt.savefig('test.png')
@@ -169,5 +163,6 @@ def initialize_all_focused_durations():
 
 def initialize_focused_duration(user_id, article_id):
     return
-'''
 
+
+'''
