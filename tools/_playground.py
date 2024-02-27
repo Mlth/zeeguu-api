@@ -73,6 +73,28 @@ for r in res2:
 #print(res2)
 
 
+res = ElasticQuery(
+    10,
+    "cake",
+    "sports, politics",
+    "",
+    "",
+    "",
+    lan,
+    10,
+    1
+)
+print (res)
+
+
+index_all_articles(db.session)
+
+#es2 = article_recommendations_for_user(u, 10)
+
+#print(res2)
+
+
+'''
 conn = db.engine.raw_connection()
 
 query = """
@@ -113,31 +135,30 @@ y_start = 50
 df = pd.read_sql_query(query, conn)
 #df.to_csv(sys.stdout, index=False)
 df.astype('int32').dtypes
-df.plot(kind = 'scatter', x = 'duration', y = 'word_count', color='blue')
+#df.plot(kind = 'scatter', x = 'duration', y = 'word_count', color='blue')
 
-if upper_bound:
-    x_values = df['duration']
-    y_values_line = 20 * x_values + y_start
-    plt.scatter(df['duration'], df['word_count'], label='Data Points')
-    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-
+#if upper_bound:
+#    x_values = df['duration']
+#    y_values_line = 20 * x_values + y_start
+#    plt.scatter(df['duration'], df['word_count'], label='Data Points')
+#    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
 if lower_bound:
     x_values = df['duration']
     y_values_line = [y_start] * len(x_values)
     plt.scatter(df['duration'], df['word_count'], label='Data Points')
     plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-
-plt.savefig('test.png')
-print("Has been saved")
-plt.show()
+'''
 
 
-conn.close()
+#plt.savefig('test.png')
+#plt.show()
+
+
+#conn.close()
 
 
 
 
-print("after test")
 
 
 
