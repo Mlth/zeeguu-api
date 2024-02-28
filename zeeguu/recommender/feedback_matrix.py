@@ -150,9 +150,9 @@ class FeedbackMatrix:
         plt.grid(True)
         plt.rc('axes', axisbelow=True)
 
-        have_read_ratio = have_read_sessions / len(df) * 100
-        have_not_read_ratio = 100 - have_read_ratio
         if have_read_sessions > 0:
+            have_read_ratio = have_read_sessions / len(df) * 100
+            have_not_read_ratio = 100 - have_read_ratio
             plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
             plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
         if not simple:
