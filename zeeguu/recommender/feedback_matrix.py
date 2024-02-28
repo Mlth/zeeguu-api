@@ -227,10 +227,11 @@ class FeedbackMatrix:
 
     def build_sparse_tensor(self, force=False):
         # This function is not run in the constructor because it takes such a long time to run.
+        print("Building sparse tensor")
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
-        indices = self.sessions_df[['user_id', 'article_id']].values
-        values = self.sessions_df['liked'].values
+        indices = self.liked_sessions_df[['user_id', 'article_id']].values
+        values = self.liked_sessions_df['expected_read'].values
         num_of_users = User.num_of_users()
         num_of_articles = Article.num_of_articles()
         tensor = tf.SparseTensor(
@@ -245,7 +246,7 @@ class FeedbackMatrix:
         return df
 
     def __session_list_to_df(self, sessions):
-        df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'liked', 'days_since'])
+        df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'expected_read', 'liked', "df_feedback" 'days_since'])
         return df
 
     def print_tensor(self):

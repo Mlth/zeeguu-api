@@ -28,5 +28,7 @@ matrix.generate_dfs(True)
 matrix.plot_difficulty_sessions_df("difficulty_sessions_adjustment")
 #matrix.plot_difficulty_sessions_df("difficulty_sessions_with_adjustment")
 
+matrix.build_sparse_tensor()
+matrix.visualize_tensor()
 
 print("after test")
