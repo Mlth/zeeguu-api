@@ -155,7 +155,7 @@ class FeedbackMatrix:
             have_not_read_ratio = 100 - have_read_ratio
             plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
             plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
-        if not simple:
+        if simple:
             plt.text(0, 1.01, f"Green = liked, yellow = easy, cyan = Ok, black = Difficult", transform=plt.gca().transAxes)
 
         #Change to '.svg' and format to 'svg' for svg.
@@ -190,10 +190,11 @@ class FeedbackMatrix:
 
     def build_sparse_tensor(self, force=False):
         # This function is not run in the constructor because it takes such a long time to run.
+        print("Building sparse tensor")
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
-        indices = self.sessions_df[['user_id', 'article_id']].values
-        values = self.sessions_df['liked'].values
+        indices = self.liked_sessions_df[['user_id', 'article_id']].values
+        values = self.liked_sessions_df['expected_read'].values
         num_of_users = User.num_of_users()
         num_of_articles = Article.num_of_articles()
         tensor = tf.SparseTensor(
@@ -208,11 +209,34 @@ class FeedbackMatrix:
         return df
 
     def __session_list_to_df(self, sessions):
-        df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'liked', 'days_since'])
+        df = pd.DataFrame(sessions, columns=['user_id', 'article_id', 'user_duration', 'language', 'difficulty', 'word_count', 'expected_read', 'liked', "df_feedback" 'days_since'])
         return df
 
-    def print_tensor(self):
-        print(tf.sparse.to_dense(self.tensor))
+    def visualize_tensor(self, file_name='tensor'):
+        # This method save a .png image that shows the value of each user-article pair, by using color to represent the value.
+        print("Visualizing tensor")
+
+        if self.tensor is None:
+            print("Tensor is None. Building tensor first")
+            self.build_sparse_tensor()
+
+        with tf.Session() as sess:
+            indices = sess.run(self.tensor.indices)
+            values = sess.run(self.tensor.values)
+
+            # Plot values from Tensor
+            plt.scatter(indices[:, 0], indices[:, 1], c=values)
+            plt.title('Sparse Tensor')
+
+            # Plot Density
+            '''density = len(values) / (dense_shape[0] * dense_shape[1])
+            axs[2].text(0.5, 0.5, f'Density: {density:.2f}', fontsize=12, ha='center')
+            axs[2].axis('off')
+            axs[2].set_title('Density')'''
+
+            plt.savefig(file_name + '.png', format='png', dpi=900)
+            print("Saving file: " + file_name + ".png")
+            plt.show()
 
     def __days_since_to_multiplier(self, days_since):
         if days_since < 365 * 1/4:
