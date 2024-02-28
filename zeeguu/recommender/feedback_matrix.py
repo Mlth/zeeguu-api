@@ -13,6 +13,7 @@ import pandas as pd
 from zeeguu.core.model import db
 import numpy as np
 import tensorflow as tf
+from collections import Counter
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -25,6 +26,8 @@ class FeedbackMatrix:
     sessions_df = None
     liked_sessions_df = None
     have_read_sessions = None
+    feedback_diff_list_toprint = None
+    feedback_counter = 0
 
     def get_all_user_reading_sessions(self):
         print("Getting all user reading sessions")
@@ -54,6 +57,9 @@ class FeedbackMatrix:
             liked_value = 0 if liked == (False,) or liked is None else 1 # should check out
             difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
             difficulty_feedback_value = 0 if difficulty_feedback is None else int(difficulty_feedback[0])
+            
+            if difficulty_feedback_value != 0:
+                self.feedback_counter += 1
 
             article_topic = article.topics
             article_topic_list = []
@@ -81,10 +87,33 @@ class FeedbackMatrix:
         if adjust:
             return self.adjust_sessions(sessions)
         else:
-            return sessions, [], 0
+            return self.no_adjust_sessions(sessions)
+        
+    def no_adjust_sessions(self, sessions):
+        liked_sessions = []
+        have_read_sessions = 0
+        feedback_diff_list = []
+
+        for session in sessions.keys():
+            
+            should_spend_reading_lower_bound = get_expected_reading_time(sessions[session]['word_count'], self.upper_bound_reading_speed)
+            should_spend_reading_upper_bound = get_expected_reading_time(sessions[session]['word_count'], self.lower_bound_reading_speed)
+            
+            user_duration = sessions[session]['user_duration']
+
+            if user_duration <= should_spend_reading_upper_bound and user_duration >= should_spend_reading_lower_bound:
+                have_read_sessions += 1
+                sessions[session]['expected_read'] = 1
+                liked_sessions.append(sessions[session])
+                feedback_diff_list.append(sessions[session]['df_feedback'])
+            else:
+                continue
+
+        return sessions, liked_sessions, have_read_sessions, feedback_diff_list
 
     def adjust_sessions(self, sessions):
         liked_sessions = []
+        feedback_diff_list = []
         have_read_sessions = 0
 
         for session in sessions.keys():
@@ -103,7 +132,6 @@ class FeedbackMatrix:
             diff = sessions[session]['difficulty']
             calcDiff = switch_difficulty(diff)
             diff = get_diff_in_article_and_user_level(calcDiff, usr_lvl)
-        
             timesTranslated = UserActivityData.translated_words_for_article(user_id, article_id)
             userDurationWithTranslated = (sessions[session]['user_duration'] - (timesTranslated * 3)) * diff
             sessions[session]['user_duration'] = userDurationWithTranslated 
@@ -112,16 +140,17 @@ class FeedbackMatrix:
                 have_read_sessions += 1
                 sessions[session]['expected_read'] = 1
                 liked_sessions.append(sessions[session])
+                feedback_diff_list.append(sessions[session]['df_feedback'])
             else:
                 continue
 
-        return sessions, liked_sessions, have_read_sessions
+        return sessions, liked_sessions, have_read_sessions, feedback_diff_list
 
     # ------------------- PLOTTING -------------------
 
     def get_diff_color(self, df, precise=False):
         if precise:
-            return np.where(df['df_feedback'] == 1, 'yellow', np.where(df['df_feedback'] == 3, 'cyan', 'black'))
+            return np.where(df['df_feedback'] == 1, 'yellow', np.where(df['df_feedback'] == 3, 'blue', 'black'))
         else:
             return "yellow"
 
@@ -155,13 +184,16 @@ class FeedbackMatrix:
             have_not_read_ratio = 100 - have_read_ratio
             plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
             plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
+            plt.text(0, 1.01, f"Green = liked, yellow = easy, blue = Ok, black = Difficult", transform=plt.gca().transAxes)
         if not simple:
-            plt.text(0, 1.01, f"Green = liked, yellow = easy, cyan = Ok, black = Difficult", transform=plt.gca().transAxes)
+            plt.text(0, 1.01, f"Green = liked, yellow = easy, blue = Ok, black = Difficult", transform=plt.gca().transAxes)
 
         #Change to '.svg' and format to 'svg' for svg.
         plt.savefig(file_name + '.png', format='png', dpi=900)
         print("Saving file: " + file_name + ".png")
         plt.show()
+
+    
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")
@@ -169,21 +201,26 @@ class FeedbackMatrix:
 
     def plot_difficulty_sessions_df(self, name):
         print("Plotting difficulty sessions. Saving to file: " + name + ".png")
-        self.plot_urs_with_duration_and_word_count(self.sessions_df[self.sessions_df['df_feedback'] != 0], 0, name, True)
+        print("Printing the amount of difficulty feedback recored. Saving to file: " + name + ".txt")
+
+        self.print_feedback_difficulty_list(name)
+        self.plot_urs_with_duration_and_word_count(self.sessions_df[self.sessions_df['df_feedback'] != 0], self.have_read_sessions, name, True)
 
     # ------------------- END PLOTTING -------------------
 
-    def generate_dfs(self):
-        sessions, liked_sessions, have_read_sessions = self.get_sessions()
+    def generate_dfs(self, adjustment_value=True):
+        sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions(adjustment_value)
         df = self.__session_map_to_df(sessions)
         liked_df = self.__session_list_to_df(liked_sessions)
+        
 
         self.sessions_df = df
         self.liked_sessions_df = liked_df
         self.have_read_sessions = have_read_sessions
+        self.feedback_diff_list_toprint = feedback_diff_list
 
     def generate_simple_df(self):
-        sessions, _, _ = self.get_sessions(False)
+        sessions, _, _ = self.get_sessions(False, True, True)
         df = self.__session_map_to_df(sessions)
 
         self.sessions_df = df
@@ -213,6 +250,19 @@ class FeedbackMatrix:
 
     def print_tensor(self):
         print(tf.sparse.to_dense(self.tensor))
+
+    def print_feedback_difficulty_list(self, name):
+
+        element_counts = Counter(self.feedback_diff_list_toprint)
+
+        with open(name + ".txt", 'w') as f:
+            f.write(f"Total number of feedback recorded from the session: {self.feedback_counter}\n")
+            f.write(f"The amount of different values inside the proposed range:\n")
+            for element, count in element_counts.items():
+                f.write(f"Difficulty: {element}: count: {count}\n")
+            f.write(f"The number of feedbacks insde the range: {len(self.feedback_diff_list_toprint)}\n")    
+            f.write(f"The number of feedbacks outside the range: {self.feedback_counter - len(self.feedback_diff_list_toprint)}\n")    
+
 
     def __days_since_to_multiplier(self, days_since):
         if days_since < 365 * 1/4:
