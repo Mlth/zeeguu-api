@@ -236,8 +236,7 @@ class FeedbackMatrix:
         return df
 
     def __session_list_to_df(self, sessions: list[FeedbackMatrixSession]):
-        data = {vars(session) for session in sessions}
-        df = pd.DataFrame.from_dict(data, orient='index')
+        df = pd.DataFrame(sessions)
         return df
 
     def build_sparse_tensor(self, force=False):
