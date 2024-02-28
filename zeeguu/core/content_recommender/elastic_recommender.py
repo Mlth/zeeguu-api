@@ -9,6 +9,7 @@
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, SF
+import time
 
 from zeeguu.core.model import (
     Article,
@@ -128,38 +129,46 @@ def article_recommendations_for_user(
     es = Elasticsearch(ES_CONN_STRING)
 
     #big count uses scroll api instead to chunk it in to manageable parts
-    if(count > 1000):
-        broken = 0
+    if count > 1000:
+        start = time.time()
+        query_body_with_slice = {
+        "slice": {
+            "id": 0,  # Set the slice id
+            "max": 8   # Set the maximum number of slices
+        },
+        **query_body  # Merge the original query body with the slice parameter
+        }
+    
         res = es.search(
             index=ES_ZINDEX,
-            body=query_body,
+            body=query_body_with_slice,
             scroll='2m',
-            size=100)
-        
+            size=100
+        )
+
         scroll_id = res["_scroll_id"]
         total_docs = res['hits']['total']['value']
+        print(f"Total documents: {total_docs}")
+        final_article_mix = []
         hits = res['hits']['hits']
-        print(total_docs)
         final_article_mix.extend(_to_articles_from_ES_hits(hits))
 
         while len(hits) > 0:
-            scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
-            scroll_id = scan_results['_scroll_id']
-            hits = scan_results['hits']['hits']
+            try:
+                scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
+                scroll_id = scan_results['_scroll_id']
+                hits = scan_results['hits']['hits']
+                final_article_mix.extend(_to_articles_from_ES_hits(hits))
+            except Exception as e:
+                print(f"Error occurred during scroll: {e}")
+                break
 
-
-            final_article_mix.extend(_to_articles_from_ES_hits(hits))
-        for a in final_article_mix:
-            if(a is None or a.broken):
-                broken = broken + 1
-        
         articles = [a for a in final_article_mix if a is not None and not a.broken]
-        print(f"Broken articles: {broken}")
         sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
-        es.clear_scroll(scroll_id=scroll_id)        
+        es.clear_scroll(scroll_id=scroll_id)
+        end = time.time()
+        print(end - start)
         return sorted_articles
-
-
 
     res = es.search(index=ES_ZINDEX, body=query_body)
     
