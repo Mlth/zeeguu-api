@@ -1,3 +1,6 @@
+import os
+
+resource_path = script_dir = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
 
 def get_expected_reading_time(word_count, offset):
@@ -5,7 +8,7 @@ def get_expected_reading_time(word_count, offset):
     # Thus, high offset/WPM = low expected reading time.
     return (word_count / (average_reading_speed + offset)) * 60
 
-def switch_difficulty(number):
+def cefr_to_fk_difficulty(number):
     result = 0
 
     if 0 <= number <= 10:
@@ -32,3 +35,12 @@ def get_diff_in_article_and_user_level(article_diff, user_level):
         diff = 1
 
     return diff
+
+def days_since_normalizer(days_since):
+        if days_since < 365 * 1/4:
+            return 1
+        elif days_since < 365 * 2/4:
+            return 0.75
+        elif days_since < 365 * 3/4:
+            return 0.5
+        return 0.25
