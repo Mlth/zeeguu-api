@@ -130,45 +130,7 @@ def article_recommendations_for_user(
 
     #big count uses scroll api instead to chunk it in to manageable parts
     if count > 1000:
-        start = time.time()
-        query_body_with_slice = {
-        "slice": {
-            "id": 0,  # Set the slice id
-            "max": 8   # Set the maximum number of slices
-        },
-        **query_body  # Merge the original query body with the slice parameter
-        }
-    
-        res = es.search(
-            index=ES_ZINDEX,
-            body=query_body_with_slice,
-            scroll='2m',
-            size=100
-        )
-
-        scroll_id = res["_scroll_id"]
-        total_docs = res['hits']['total']['value']
-        print(f"Total documents: {total_docs}")
-        final_article_mix = []
-        hits = res['hits']['hits']
-        final_article_mix.extend(_to_articles_from_ES_hits(hits))
-
-        while len(hits) > 0:
-            try:
-                scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
-                scroll_id = scan_results['_scroll_id']
-                hits = scan_results['hits']['hits']
-                final_article_mix.extend(_to_articles_from_ES_hits(hits))
-            except Exception as e:
-                print(f"Error occurred during scroll: {e}")
-                break
-
-        articles = [a for a in final_article_mix if a is not None and not a.broken]
-        sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
-        es.clear_scroll(scroll_id=scroll_id)
-        end = time.time()
-        print(end - start)
-        return sorted_articles
+        return article_recommendations_for_big_queries(query_body, es)
 
     res = es.search(index=ES_ZINDEX, body=query_body)
     
@@ -351,3 +313,41 @@ def _difficuty_level_bounds(level):
         lower_bounds = 4
         upper_bounds = 8
     return lower_bounds, upper_bounds
+
+def article_recommendations_for_big_queries(query_body, es):
+    start = time.time()
+    query_body_with_slice = {
+    "slice": {
+        "id": 0,  # Set the slice id
+        "max": 8   # Set the maximum number of slices
+    },
+    **query_body  # Merge the original query body with the slice parameter
+    }
+
+    res = es.search(
+        index=ES_ZINDEX,
+        body=query_body_with_slice,
+        scroll='2m',
+        size=100
+    )
+    scroll_id = res["_scroll_id"]
+    total_docs = res['hits']['total']['value']
+    print(f"Total documents: {total_docs}")
+    final_article_mix = []
+    hits = res['hits']['hits']
+    final_article_mix.extend(_to_articles_from_ES_hits(hits))
+    while len(hits) > 0:
+        try:
+            scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
+            scroll_id = scan_results['_scroll_id']
+            hits = scan_results['hits']['hits']
+            final_article_mix.extend(_to_articles_from_ES_hits(hits))
+        except Exception as e:
+            print(f"Error occurred during scroll: {e}")
+            break
+    articles = [a for a in final_article_mix if a is not None and not a.broken]
+    sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
+    es.clear_scroll(scroll_id=scroll_id)
+    end = time.time()
+    print(end - start)
+    return sorted_articles
