@@ -19,13 +19,13 @@ print("Running playground")
 print("before the function")
 
 matrix = FeedbackMatrix()
-matrix.calc_dfs()
-matrix.plot_sessions_df("sessions")
+matrix.generate_dfs()
+#matrix.plot_sessions_df("sessions")
 
 
 # These are to just make a simple Dataframe that can be used for testing difficulty
-#matrix.calc_simple_df()
-#matrix.plot_difficulty_sessions_df("difficulty_sessions")
+#matrix.generate_simple_df()
+matrix.plot_difficulty_sessions_df("difficulty_sessions")
 #matrix.plot_difficulty_sessions_df("difficulty_sessions_with_adjustment")
 
 
