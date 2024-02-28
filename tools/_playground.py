@@ -6,7 +6,7 @@ import numpy as np
 import pyarrow as pa # needed for pandas 
 
 from zeeguu.api.app import create_app
-from zeeguu.core.candidate_pool_generator.candidate_generator import build_candidate_pool_for_lang
+from zeeguu.core.candidate_pool_generator.candidate_generator import build_candidate_pool_for_lang, build_candidate_pool_for_user
 
 app = create_app()
 app.app_context().push()
@@ -45,12 +45,15 @@ res = ElasticQuery(
 print (res)
 '''
 
-res = build_candidate_pool_for_lang("en", "trump")
+#res = build_candidate_pool_for_lang("en", "trump")
+#print(len(res))
+
+#for r in res:
+#    print(r)
+
+res = build_candidate_pool_for_user(534)
+
 print(len(res))
-
-for r in res:
-    print(r)
-
 
 
 '''
