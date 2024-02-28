@@ -236,6 +236,7 @@ class FeedbackMatrix:
         return df
 
     def __session_list_to_df(self, sessions: list[FeedbackMatrixSession]):
+        # FIX ME
         df = pd.DataFrame(sessions)
         return df
 
