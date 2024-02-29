@@ -6,15 +6,18 @@ from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
 from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
-from zeeguu.recommender.utils import cefr_to_fk_difficulty, days_since_normalizer, get_diff_in_article_and_user_level, get_expected_reading_time, resource_path
+from zeeguu.recommender.utils import cefr_to_fk_difficulty, get_diff_in_article_and_user_level, get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed
 import matplotlib.pyplot as plt
-import numpy as np
 from datetime import datetime, timedelta
 import pandas as pd
 from zeeguu.core.model import db
 import numpy as np
-import tensorflow as tf
 from collections import Counter
+from zeeguu.recommender.visualizer import Visualizer
+from enum import Enum, auto
+from zeeguu.core.model import db
+
+import tensorflow as tf
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -34,10 +37,26 @@ class FeedbackMatrixSession:
         self.liked = liked
         self.difficulty_feedback = difficulty_feedback
         self.days_since = days_since
-        
+
+class ShowData(Enum):
+    ALL = auto()
+    LIKED = auto()
+    RATED_DIFFICULTY = auto()
+
+class AdjustmentConfig:
+    def __init__(self, difficulty_weight, translation_adjustment_value):
+        self.difficulty_weight = difficulty_weight
+        self.translation_adjustment_value = translation_adjustment_value
+
+class FeedbackMatrixConfig:
+    def __init__(self, show_data: ShowData, adjustment_config: AdjustmentConfig):
+        self.show_data = show_data
+        self.adjustment_config = adjustment_config
+
+
 class FeedbackMatrix:
-    upper_bound_reading_speed = 20
-    lower_bound_reading_speed = -20
+    default_difficulty_weight = 1
+    default_translation_adjustment_value = 3
 
     tensor = None
     sessions_df = None
@@ -45,6 +64,8 @@ class FeedbackMatrix:
     have_read_sessions = None
     feedback_diff_list_toprint = None
     feedback_counter = 0
+
+    visualizer = Visualizer()
 
     def get_all_user_reading_sessions(self):
         print("Getting all user reading sessions")
@@ -60,11 +81,36 @@ class FeedbackMatrix:
         )
         return query_data
 
-    def get_sessions(self, adjust=True):
-        print("Getting sessions with likes")
+    def get_liked_user_reading_sessions(self):
+
+        return None
+    
+    def get_rated_difficulty_user_reading_sessions(self):
+        print("Getting rated difficulty user reading sessions")
+        query_data = (
+            db.session.query(UserReadingSession)
+                .join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id))
+                #.filter(UserReadingSession.user_id == 2953)
+                .filter(UserReadingSession.article_id.isnot(None))
+                .filter(UserReadingSession.duration >= 30000) # 30 seconds
+                .filter(UserReadingSession.duration <= 3600000) # 1 hour
+                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
+                .order_by(UserReadingSession.user_id.asc())
+                .all()
+        )
+        return query_data
+
+    def get_sessions(self, config: FeedbackMatrixConfig):
+        print("Getting sessions")
         sessions: dict[Tuple[int, int], FeedbackMatrixSession] = {}
 
-        query_data = self.get_all_user_reading_sessions()
+        query_data = None
+        if config.show_data == ShowData.LIKED:
+            query_data = self.get_liked_user_reading_sessions()
+        elif config.show_data == ShowData.RATED_DIFFICULTY:
+            query_data = self.get_rated_difficulty_user_reading_sessions()
+        else:
+            query_data = self.get_all_user_reading_sessions()
 
         for session in query_data:
             article_id = session.article_id
@@ -102,9 +148,34 @@ class FeedbackMatrix:
             else:
                 sessions[(user_id, article_id)].session_duration += session_duration
 
-        return self.get_sessions_data(sessions, adjust)
+        return self.get_sessions_data(sessions, config)
     
-    def get_difficulty_adjustment(self, session: FeedbackMatrixSession):
+    def get_sessions_data(self, sessions: dict[Tuple[int, int], FeedbackMatrixSession], config: FeedbackMatrixConfig):
+        liked_sessions = []
+        feedback_diff_list = []
+        have_read_sessions = 0
+
+        if config.adjustment_config is None:
+            config.adjustment_config = AdjustmentConfig(difficulty_weight=self.default_difficulty_weight, translation_adjustment_value=self.default_translation_adjustment_value)
+
+        for session in sessions.keys():
+            sessions[session].session_duration = self.get_translation_adjustment(sessions[session], config.adjustment_config.translation_adjustment_value)
+            #sessions[session].session_duration = self.get_difficulty_adjustment(sessions[session], config.adjustment_config.difficulty_weight)
+
+            should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
+            should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
+
+            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
+                have_read_sessions += 1
+                sessions[session].expected_read = 1
+                liked_sessions.append(sessions[session])
+                feedback_diff_list.append(sessions[session].difficulty_feedback)
+            if self.duration_is_within_bounds(sessions[session].original_session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
+                sessions[session].original_expected_read = 1
+        
+        return sessions, liked_sessions, have_read_sessions, feedback_diff_list
+
+    def get_difficulty_adjustment(self, session: FeedbackMatrixSession, weight):
         user_level_query = (
             UserLanguage.query
                 .filter_by(user_id = session.user_id, language_id=session.language_id)
@@ -119,103 +190,17 @@ class FeedbackMatrix:
 
         difficulty = session.difficulty
         fk_difficulty = cefr_to_fk_difficulty(difficulty)
-        return get_diff_in_article_and_user_level(fk_difficulty, user_level)
+        return get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
 
-    def get_translation_adjustment(self, session: FeedbackMatrixSession):
+    def get_translation_adjustment(self, session: FeedbackMatrixSession, adjustment_value):
         timesTranslated = UserActivityData.translated_words_for_article(session.user_id, session.article_id)
-        return session.session_duration - (timesTranslated * 3)
+        return session.session_duration - (timesTranslated * adjustment_value)
 
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
 
-    def get_sessions_data(self, sessions: dict[Tuple[int, int], FeedbackMatrixSession], adjust=True):
-        liked_sessions = []
-        feedback_diff_list = []
-        have_read_sessions = 0
-
-        for session in sessions.keys():
-            sessions[session].session_duration = self.get_translation_adjustment(sessions[session])
-            sessions[session].session_duration = self.get_translation_adjustment(sessions[session])
-
-            should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, self.upper_bound_reading_speed)
-            should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, self.lower_bound_reading_speed)
-
-            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
-                have_read_sessions += 1
-                sessions[session].expected_read = 1
-                liked_sessions.append(sessions[session])
-                feedback_diff_list.append(sessions[session].difficulty_feedback)
-            if self.duration_is_within_bounds(sessions[session].original_session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
-                sessions[session].original_expected_read = 1
-        
-        return sessions, liked_sessions, have_read_sessions, feedback_diff_list
-
-    # ------------------- PLOTTING -------------------
-
-    def get_diff_color(self, df, precise=False):
-        if precise:
-            return np.where(df['difficulty_feedback'] == 1, 'yellow', np.where(df['difficulty_feedback'] == 3, 'blue', 'black'))
-        else:
-            return "yellow"
-
-    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, simple=False):
-        if len(df) == 0:
-            print("No data to plot")
-            return
-        
-        x_min, x_max = 0, 2000
-        y_min, y_max = 0, 2000
-
-        plt.xlabel('Word count')
-        plt.ylabel('Duration')
-
-        expected_read_color = np.where(df['liked'] == 1, 'green', 
-                                    np.where(df['difficulty_feedback'] != 0, self.get_diff_color(df, simple),
-                                        np.where(df['expected_read'] == 1, 'blue', 'red')))
-        plt.scatter(df['word_count'], df['session_duration'], alpha=[days_since_normalizer(d) for d in df['days_since']], color=expected_read_color)
-
-        x_values = df['word_count']
-        y_values_line = [get_expected_reading_time(x, self.lower_bound_reading_speed) for x in x_values]
-        plt.plot(x_values, y_values_line, color='red', label='y = ')
-
-        x_values = df['word_count']
-        y_values_line = [get_expected_reading_time(x, self.upper_bound_reading_speed) for x in x_values]
-        plt.plot(x_values, y_values_line, color='red', label='y = ')
-
-        plt.xlim(x_min, x_max)
-        plt.ylim(y_min, y_max)
-        plt.grid(True)
-        plt.rc('axes', axisbelow=True)
-
-        if have_read_sessions > 0:
-            have_read_ratio = have_read_sessions / len(df) * 100
-            have_not_read_ratio = 100 - have_read_ratio
-            plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
-            plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
-            plt.text(0, 1.01, f"Green = liked, yellow = easy, blue = Ok, black = Difficult", transform=plt.gca().transAxes)
-        if simple:
-            plt.text(0, 1.01, f"Green = liked, yellow = easy, blue = Ok, black = Difficult", transform=plt.gca().transAxes)
-
-        #Change to '.svg' and format to 'svg' for svg.
-        plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
-        print("Saving file: " + file_name + ".png")
-        plt.show()
-
-    def plot_sessions_df(self, name):
-        print("Plotting sessions. Saving to file: " + name + ".png")
-        self.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name)
-
-    def plot_difficulty_sessions_df(self, name):
-        print("Plotting difficulty sessions. Saving to file: " + name + ".png")
-        print("Printing the amount of difficulty feedback recored. Saving to file: " + name + ".txt")
-
-        self.print_feedback_difficulty_list(name)
-        self.plot_urs_with_duration_and_word_count(self.sessions_df[self.sessions_df['difficulty_feedback'] != 0], self.have_read_sessions, name, True)
-
-    # ------------------- END PLOTTING -------------------
-
-    def generate_dfs(self, adjustment_value=True):
-        sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions(adjustment_value)
+    def generate_dfs(self, config: FeedbackMatrixConfig):
+        sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions(config)
         df = self.__session_map_to_df(sessions)
         liked_df = self.__session_list_to_df(liked_sessions)
 
@@ -225,7 +210,7 @@ class FeedbackMatrix:
         self.feedback_diff_list_toprint = feedback_diff_list
 
     def generate_simple_df(self):
-        sessions, _, _ = self.get_sessions(False, True, True)
+        sessions, _, _ = self.get_sessions(adjust=False)
         df = self.__session_map_to_df(sessions)
 
         self.sessions_df = df
@@ -236,8 +221,9 @@ class FeedbackMatrix:
         return df
 
     def __session_list_to_df(self, sessions: list[FeedbackMatrixSession]):
-        # FIX ME
-        df = pd.DataFrame(sessions)
+        # Pretty weird logic. We convert a list to a dict and then to a dataframe. Should be changed.
+        data = {index: vars(session) for index, session in enumerate(sessions)}
+        df = pd.DataFrame.from_dict(data, orient='index')
         return df
 
     def build_sparse_tensor(self, force=False):
@@ -257,31 +243,25 @@ class FeedbackMatrix:
         )
         self.tensor = tensor
 
+    def plot_sessions_df(self, name):
+        print("Plotting sessions. Saving to file: " + name + ".png")
+        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name)
+
+    def plot_difficulty_sessions_df(self, name):
+        print("Plotting difficulty sessions. Saving to file: " + name + ".png")
+        print("Printing the amount of difficulty feedback recored. Saving to file: " + name + ".txt")
+
+        self.print_feedback_difficulty_list(name)
+        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df[self.sessions_df['difficulty_feedback'] != 0], self.have_read_sessions, name, True)
+
     def visualize_tensor(self, file_name='tensor'):
-        # This method save a .png image that shows the value of each user-article pair, by using color to represent the value.
         print("Visualizing tensor")
 
         if self.tensor is None:
             print("Tensor is None. Building tensor first")
             self.build_sparse_tensor()
 
-        with tf.Session() as sess:
-            indices = sess.run(self.tensor.indices)
-            values = sess.run(self.tensor.values)
-
-            # Plot values from Tensor
-            plt.scatter(indices[:, 0], indices[:, 1], c=values)
-            plt.title('Sparse Tensor')
-
-            # Plot Density
-            '''density = len(values) / (dense_shape[0] * dense_shape[1])
-            axs[2].text(0.5, 0.5, f'Density: {density:.2f}', fontsize=12, ha='center')
-            axs[2].axis('off')
-            axs[2].set_title('Density')'''
-
-            plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
-            print("Saving file: " + file_name + ".png")
-            plt.show()
+        self.visualizer.visualize_tensor(self.tensor, file_name)
 
     def print_feedback_difficulty_list(self, name):
         element_counts = Counter(self.feedback_diff_list_toprint)

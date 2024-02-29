@@ -331,7 +331,7 @@ class UserActivityData(db.Model):
         count = 0
 
         for activity in activitySession:
-            if activity.event == "UMR - TRANSLATE TEXT":
+            if "TRANSLATE TEXT" in activity.event:
                 count += 1
         
         return count

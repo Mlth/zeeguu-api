@@ -9,7 +9,7 @@ import pyarrow as pa # needed for pandas
 
 from zeeguu.api.app import create_app
 from zeeguu.core.model.user_reading_session import UserReadingSession
-from zeeguu.recommender.feedback_matrix import FeedbackMatrix
+from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig, ShowData
 
 app = create_app()
 app.app_context().push()
@@ -19,16 +19,21 @@ print("Running playground")
 print("before the function")
 
 matrix = FeedbackMatrix()
-matrix.generate_dfs(True)
-#matrix.plot_sessions_df("sessions")
 
+for i in range(5):
+    print("round", str(i))
+    config = FeedbackMatrixConfig(
+        ShowData.RATED_DIFFICULTY, 
+        AdjustmentConfig(
+            difficulty_weight=1,
+            translation_adjustment_value=i,
+        )
+    )
 
-# These are to just make a simple Dataframe that can be used for testing difficulty
-#matrix.generate_simple_df()
-matrix.plot_difficulty_sessions_df("difficulty_sessions_adjustment")
-#matrix.plot_difficulty_sessions_df("difficulty_sessions_with_adjustment")
+    matrix.generate_dfs(config)
 
-#matrix.build_sparse_tensor()
-#matrix.visualize_tensor()
+    matrix.plot_sessions_df("test/run-" + str(i))
+
+    print("round", str(i), "done")
 
 print("after test")
