@@ -8,6 +8,12 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 
 class Visualizer:
 
+    def get_diff_color(self, df, precise=False):
+        if precise:
+            return np.where(df['difficulty_feedback'] == 1, 'yellow', np.where(df['difficulty_feedback'] == 3, 'blue', 'black'))
+        else:
+            return "black"
+
     def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, simple=False):
         plt.clf()
         if len(df) == 0:
@@ -21,7 +27,7 @@ class Visualizer:
         plt.ylabel('Duration')
 
         expected_read_color = np.where(df['liked'] == 1, 'green', 
-                                    np.where(df['difficulty_feedback'] != 0, self.get_diff_color(df, simple),
+                                    np.where(df['difficulty_feedback'] != 0, self.get_diff_color(df, True),
                                         np.where(df['expected_read'] == 1, 'blue', 'red')))
         plt.scatter(df['word_count'], df['session_duration'], alpha=[days_since_normalizer(d) for d in df['days_since']], color=expected_read_color)
 
@@ -51,12 +57,6 @@ class Visualizer:
         plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
         print("Saving file: " + file_name + ".png")
         plt.show()
-
-    def get_diff_color(self, df, precise=False):
-        if precise:
-            return np.where(df['difficulty_feedback'] == 1, 'yellow', np.where(df['difficulty_feedback'] == 3, 'blue', 'black'))
-        else:
-            return "black"
     
     def visualize_tensor(self, tensor, file_name='tensor'):
         # This method save a .png image that shows the value of each user-article pair, by using color to represent the value.
@@ -65,6 +65,9 @@ class Visualizer:
         with tf.Session() as sess:
             indices = sess.run(tensor.indices)
             values = sess.run(tensor.values)
+
+            plt.xlabel('User id')
+            plt.ylabel('Article id')
 
             # Plot values from Tensor
             plt.scatter(indices[:, 0], indices[:, 1], c=values)
