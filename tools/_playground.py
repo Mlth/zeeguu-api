@@ -17,36 +17,7 @@ app.app_context().push()
 
 print("Running playground")
 
-print("before the function")
-
-print("before test")
-u = User.find_by_id(1)
-print(u.name)
-lan = u.learned_language
-
-res = ElasticQuery(
-    10,
-    "cake",
-    "sports, politics",
-    "",
-    "",
-    "",
-    lan,
-    10,
-    1
-)
-print (res)
-
-
-index_all_articles(db.session)
-
-#es2 = article_recommendations_for_user(u, 10)
-
-#print(res2)
-
-
-'''
-conn = db.engine.raw_connection()
+matrix = FeedbackMatrix()
 
 for i in range(5):
     print("round", str(i))
@@ -64,32 +35,4 @@ for i in range(5):
 
     print("round", str(i), "done")
 
-df = pd.read_sql_query(query, conn)
-#df.to_csv(sys.stdout, index=False)
-df.astype('int32').dtypes
-#df.plot(kind = 'scatter', x = 'duration', y = 'word_count', color='blue')
-
-#if upper_bound:
-#    x_values = df['duration']
-#    y_values_line = 20 * x_values + y_start
-#    plt.scatter(df['duration'], df['word_count'], label='Data Points')
-#    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-if lower_bound:
-    x_values = df['duration']
-    y_values_line = [y_start] * len(x_values)
-    plt.scatter(df['duration'], df['word_count'], label='Data Points')
-    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-'''
-
-
-#conn.close()
-
-'''
-def initialize_all_focused_durations():
-    for session in db['user_reading_session'].all():
-
-        
-
-def initialize_focused_duration(user_id, article_id):
-    return
-'''
+print("Ending playground")
