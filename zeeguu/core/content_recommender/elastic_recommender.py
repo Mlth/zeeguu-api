@@ -9,6 +9,7 @@
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, SF
+import concurrent.futures
 import time
 
 from zeeguu.core.model import (
@@ -314,12 +315,16 @@ def _difficuty_level_bounds(level):
         upper_bounds = 8
     return lower_bounds, upper_bounds
 
+def helper(num):
+    return num + 5
+
 def article_recommendations_for_big_queries(query_body, es):
     start = time.time()
+    threads = 8
     query_body_with_slice = {
     "slice": {
         "id": 0,  # Set the slice id
-        "max": 8   # Set the maximum number of slices
+        "max": threads   # Set the maximum number of slices
     },
     **query_body  # Merge the original query body with the slice parameter
     }
@@ -330,6 +335,14 @@ def article_recommendations_for_big_queries(query_body, es):
         scroll='2m',
         size=100
     )
+    lst = [1,2,3,4,5,6,7,8]
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(helper, n) for n in lst]
+    
+    resu = [f.result() for f in futures] 
+    for r in resu:
+        print(r)
+
     scroll_id = res["_scroll_id"]
     total_docs = res['hits']['total']['value']
     print(f"Total documents: {total_docs}")
