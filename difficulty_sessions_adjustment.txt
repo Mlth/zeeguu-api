@@ -1,0 +1,8 @@
+Total number of feedback recorded from the session: 2987
+The amount of different values inside the proposed range:
+Difficulty: 0: count: 196
+Difficulty: 3: count: 122
+Difficulty: 5: count: 24
+Difficulty: 1: count: 10
+The number of feedbacks insde the range: 352
+The number of feedbacks outside the range: 2635

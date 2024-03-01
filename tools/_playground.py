@@ -2,22 +2,22 @@ import sys
 
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
-from zeeguu.core.model import UserExerciseSession, User
+from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData, UserArticle
 import pandas as pd
 from zeeguu.core.model import db
-import matplotlib.pyplot as plt
-import numpy as np
-import pyarrow as pa # needed for pandas 
+import pyarrow as pa # needed for pandas
 
 from zeeguu.api.app import create_app
-from zeeguu.core.model.user_reading_session import UserReadingSession, Article
+from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig, ShowData
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
-from zeeguu.core.content_recommender.elastic_recommender import article_recommendations_for_user
 from zeeguu.core.elastic.indexing import index_all_articles
 
 app = create_app()
 app.app_context().push()
 
+print("Running playground")
+
+print("before the function")
 
 print("before test")
 u = User.find_by_id(1)
@@ -48,39 +48,21 @@ index_all_articles(db.session)
 '''
 conn = db.engine.raw_connection()
 
-query = """
-    SELECT * from user_reading_session urs
-    LEFT JOIN article a ON urs.article_id = a.id
-    WHERE urs.duration / a.word_count > 0.1
-"""
+for i in range(5):
+    print("round", str(i))
+    config = FeedbackMatrixConfig(
+        ShowData.RATED_DIFFICULTY, 
+        AdjustmentConfig(
+            difficulty_weight=1,
+            translation_adjustment_value=i,
+        )
+    )
 
-query = """
-    SELECT
-        (urs.duration / 60 / 60) AS duration,
-        a.word_count
-    FROM
-        user_reading_session urs
-    LEFT JOIN
-        article a ON urs.article_id = a.id
-    JOIN
-        (SELECT article_id, COUNT(*) AS session_count
-        FROM user_reading_session
-        GROUP BY article_id
-        HAVING COUNT(*) >= 20) AS session_counts
-    ON
-        urs.article_id = session_counts.article_id
-    WHERE
-        urs.duration IS NOT NULL
-        AND a.word_count IS NOT NULL
-        AND urs.duration / 60 / 60 < 60
-        AND urs.duration / 60 / 60 >= 2
-        AND a.word_count < 2000
-"""
+    matrix.generate_dfs(config)
 
-upper_bound = True
-lower_bound = True
+    matrix.plot_sessions_df("test/run-" + str(i))
 
-y_start = 50
+    print("round", str(i), "done")
 
 df = pd.read_sql_query(query, conn)
 #df.to_csv(sys.stdout, index=False)
@@ -100,15 +82,7 @@ if lower_bound:
 '''
 
 
-#plt.savefig('test.png')
-#plt.show()
-
-
 #conn.close()
-
-
-
-
 
 '''
 def initialize_all_focused_durations():
