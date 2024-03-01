@@ -1,12 +1,15 @@
 import sys
+from elasticsearch import Elasticsearch
+from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
+from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData, UserArticle
 import pandas as pd
 from zeeguu.core.model import db
-import matplotlib.pyplot as plt
-import numpy as np
-import pyarrow as pa # needed for pandas 
-
+import pyarrow as pa # needed for pandas
 from zeeguu.api.app import create_app
 from zeeguu.core.candidate_pool_generator.candidate_generator import build_candidate_pool_for_lang, build_candidate_pool_for_user
+from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig, ShowData
+from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
+from zeeguu.core.elastic.indexing import index_all_articles
 
 app = create_app()
 app.app_context().push()
@@ -24,6 +27,10 @@ for id in User.all_recent_user_ids(150):
         print("new way")
         print(duration_new)
 
+=======
+print("Running playground")
+
+print("before the function")
 
 print("before test")
 u = User.find_by_id(534)
@@ -132,6 +139,21 @@ upper_bound = True
 lower_bound = True
 
 y_start = 50
+for i in range(5):
+    print("round", str(i))
+    config = FeedbackMatrixConfig(
+        ShowData.RATED_DIFFICULTY, 
+        AdjustmentConfig(
+            difficulty_weight=1,
+            translation_adjustment_value=i,
+        )
+    )
+
+    matrix.generate_dfs(config)
+
+    matrix.plot_sessions_df("test/run-" + str(i))
+
+    print("round", str(i), "done")
 
 df = pd.read_sql_query(query, conn)
 #df.to_csv(sys.stdout, index=False)
@@ -151,18 +173,10 @@ if lower_bound:
 
 
 
-#plt.savefig('test.png')
-#plt.show()
-
-
 #conn.close()
 
-
-
-
-
-
-
+'''
+'''
 def initialize_all_focused_durations():
     for session in db['user_reading_session'].all():
 
@@ -170,6 +184,4 @@ def initialize_all_focused_durations():
 
 def initialize_focused_duration(user_id, article_id):
     return
-
-
 '''

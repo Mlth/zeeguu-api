@@ -704,3 +704,7 @@ class User(db.Model):
     def authorize_anonymous(cls, uuid, password):
         email = uuid + cls.ANONYMOUS_EMAIL_DOMAIN
         return cls.authorize(email, password)
+
+    @classmethod
+    def num_of_users(cls):
+        return cls.query.count()

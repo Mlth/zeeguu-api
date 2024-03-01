@@ -87,3 +87,4 @@ def macro_sessions_for_user(user, language_id):
         current_macro.append(session)
 
     return macro_sessions
+
