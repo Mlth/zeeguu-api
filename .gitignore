@@ -30,5 +30,7 @@ lu-mir-zeeguu-credentials.json
 zenv*
 tools/_playground.py
 
-zeeguu-anonymized-zeeguu_test-*
+/tmp
+
+zeeguu-anonymized-*
 test.png

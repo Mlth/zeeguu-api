@@ -4,9 +4,8 @@ include .env
 export
 
 # Define variables
-SQL_FILE := zeeguu-anonymized-zeeguu_test-202401300908.sql
+SQL_FILE := zeeguu-anonymized-24-03-01.sql
 DOCKER_CONTAINER := zeeguu-mysql
-
 
 # Define targets
 .PHONY: populatedb run shell test cleanup clearDB
@@ -19,16 +18,16 @@ init:
 	
 #this looks for a file called zeeguu-anonymized-zeeguu_test-202401300908.sql and copies it to the mysql container and runs it
 #Make sure you have it locally 
-check_file_exists := @docker exec $(DOCKER_CONTAINER) test -f /$(SQL_FILE) && echo "File already exists in found" || echo "Copying file to container"
+check_file_exists := @docker exec $(DOCKER_CONTAINER) sh -c "test -d /$(SQL_FILE) && echo 'File exists' || echo 'File does not exist'" > tmp/check_result.txt
 populatedb: 
 	@echo "Populating the database, this will take a while ⌛⌛⌛⌛"
 	@echo using "$(SQL_FILE)" to populate the database
 	@$(check_file_exists)
-	@if [ "$$?" -eq 1 ]; then \
+	@if grep -q "File does not exist" tmp/check_result.txt; then \
         docker cp $(SQL_FILE) $(DOCKER_CONTAINER):/$(SQL_FILE); \
     fi
+	@rm tmp/check_result.txt
 	@docker exec -i $(DOCKER_CONTAINER) bash -c 'mysql -u $(MYSQL_USER) -p$(MYSQL_PASSWORD) zeeguu_test < /$(SQL_FILE)'
-
 
 shell:
 	@docker exec -it $(DOCKER_CONTAINER) /bin/bash

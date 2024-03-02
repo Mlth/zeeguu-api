@@ -185,3 +185,4 @@ def initialize_all_focused_durations():
 def initialize_focused_duration(user_id, article_id):
     return
 '''
+print("Ending playground")
