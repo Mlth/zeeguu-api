@@ -319,6 +319,7 @@ class UserActivityData(db.Model):
 
         session.add(new_entry)
         session.commit()
+<<<<<<< HEAD
 
         if has_article_id:
             UserReadingSession.update_reading_session(
@@ -335,3 +336,5 @@ class UserActivityData(db.Model):
                 count += 1
         
         return count
+=======
+>>>>>>> upstream/master
