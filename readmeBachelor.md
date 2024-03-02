@@ -14,9 +14,23 @@ Run this after to create the container
 
 ### 3.
 
-Run this command to populate the database
+Run these commands to populate the database
 
-``docker-compose up dev_play``
+docker cp zeeguu-anonymized-zeeguu_test-202401300908.sql zeeguu-mysql:zeeguu-anonymized-zeeguu_test-202401300908.sql
+
+**NEW VERSION OF DB AVAILABLE** 
+
+docker cp zeeguu-anonymized-24-03-01.sql zeeguu-mysql:zeeguu-anonymized-24-03-01.sql
+
+docker exec -it zeeguu-mysql /bin/bash
+
+mysql -u zeeguu_test -p zeeguu_test
+
+zeeguu_test
+
+USE zeeguu_test
+
+source zeeguu-anonymized-24-03-01.sql
 
 ### 4.
 
@@ -32,19 +46,27 @@ Should get an input similar to
 
 ``["de", "es", "fr", "nl", "en", "it", "da", "pl", "sv", "ru", "no", "hu", "pt"]``
 
+run with ``docker-compose up dev_play``
+
 # Back for database if makefile does not work
 
 ````
 
 docker cp zeeguu-anonymized-zeeguu_test-202401300908.sql zeeguu-mysql:zeeguu-anonymized-zeeguu_test-202401300908.sql
 
+**NEW VERSION OF DB AVAILABLE** 
+
+docker cp zeeguu-anonymized-24-03-01.sql zeeguu-mysql:zeeguu-anonymized-24-03-01.sql
+
 docker exec -it zeeguu-mysql /bin/bash
 
 mysql -u zeeguu_test -p zeeguu_test
 
+zeeguu_test
+
 USE zeeguu_test
 
-source zeeguu-anonymized-zeeguu_test-202401300908.sql
+source zeeguu-anonymized-24-03-01.sql
 
 ````
 # ER-diagram
