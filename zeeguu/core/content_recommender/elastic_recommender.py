@@ -9,6 +9,8 @@
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, SF
+import concurrent.futures
+import time
 
 from zeeguu.core.model import (
     Article,
@@ -124,11 +126,15 @@ def article_recommendations_for_user(
         es_decay,
         es_weight,
     )
-    print(ES_CONN_STRING)
-    print("here!\n")
+
     es = Elasticsearch(ES_CONN_STRING)
+
+    #big count uses scroll api instead to chunk it in to manageable parts
+    if count > 1000:
+        return article_recommendations_for_big_queries(query_body, es)
+
     res = es.search(index=ES_ZINDEX, body=query_body)
-    print("done with conn")
+    
     hit_list = res["hits"].get("hits")
     final_article_mix.extend(_to_articles_from_ES_hits(hit_list))
 
@@ -308,3 +314,53 @@ def _difficuty_level_bounds(level):
         lower_bounds = 4
         upper_bounds = 8
     return lower_bounds, upper_bounds
+
+def helper(num):
+    return num + 5
+
+def article_recommendations_for_big_queries(query_body, es):
+    start = time.time()
+    threads = 8
+    query_body_with_slice = {
+    "slice": {
+        "id": 0,  # Set the slice id
+        "max": threads   # Set the maximum number of slices
+    },
+    **query_body  # Merge the original query body with the slice parameter
+    }
+
+    res = es.search(
+        index=ES_ZINDEX,
+        body=query_body_with_slice,
+        scroll='2m',
+        size=100
+    )
+    lst = [1,2,3,4,5,6,7,8]
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(helper, n) for n in lst]
+    
+    resu = [f.result() for f in futures] 
+    for r in resu:
+        print(r)
+
+    scroll_id = res["_scroll_id"]
+    total_docs = res['hits']['total']['value']
+    print(f"Total documents: {total_docs}")
+    final_article_mix = []
+    hits = res['hits']['hits']
+    final_article_mix.extend(_to_articles_from_ES_hits(hits))
+    while len(hits) > 0:
+        try:
+            scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
+            scroll_id = scan_results['_scroll_id']
+            hits = scan_results['hits']['hits']
+            final_article_mix.extend(_to_articles_from_ES_hits(hits))
+        except Exception as e:
+            print(f"Error occurred during scroll: {e}")
+            break
+    articles = [a for a in final_article_mix if a is not None and not a.broken]
+    sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
+    es.clear_scroll(scroll_id=scroll_id)
+    end = time.time()
+    print(end - start)
+    return sorted_articles
