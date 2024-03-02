@@ -42,7 +42,7 @@ class ShowData(Enum):
     ALL = auto()
     LIKED = auto()
     RATED_DIFFICULTY = auto()
-
+    
 class AdjustmentConfig:
     def __init__(self, difficulty_weight, translation_adjustment_value):
         self.difficulty_weight = difficulty_weight
@@ -67,50 +67,34 @@ class FeedbackMatrix:
 
     visualizer = Visualizer()
 
-    def get_all_user_reading_sessions(self):
+    def get_user_reading_sessions(self, show_data: ShowData = ShowData.ALL):
         print("Getting all user reading sessions")
-        query_data = (
+        query = (
             UserReadingSession.query
-                #.filter(UserReadingSession.user_id == 534)
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
                 .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
-                .all()
         )
-        return query_data
-
-    def get_liked_user_reading_sessions(self):
-
-        return None
-    
-    def get_rated_difficulty_user_reading_sessions(self):
-        print("Getting rated difficulty user reading sessions")
-        query_data = (
-            db.session.query(UserReadingSession)
-                .join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id))
-                #.filter(UserReadingSession.user_id == 2953)
-                .filter(UserReadingSession.article_id.isnot(None))
-                .filter(UserReadingSession.duration >= 30000) # 30 seconds
-                .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
-                .order_by(UserReadingSession.user_id.asc())
-                .all()
-        )
-        return query_data
+        if show_data == ShowData.LIKED:
+            query = (
+                query.join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id))
+                .filter(UserArticle.liked == True)
+            )
+        elif show_data == ShowData.RATED_DIFFICULTY:
+            query = (
+                query.join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id))
+                .filter(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
+            )
+        return query.all()
 
     def get_sessions(self, config: FeedbackMatrixConfig):
         print("Getting sessions")
         sessions: dict[Tuple[int, int], FeedbackMatrixSession] = {}
 
         query_data = None
-        if config.show_data == ShowData.LIKED:
-            query_data = self.get_liked_user_reading_sessions()
-        elif config.show_data == ShowData.RATED_DIFFICULTY:
-            query_data = self.get_rated_difficulty_user_reading_sessions()
-        else:
-            query_data = self.get_all_user_reading_sessions()
+        query_data = self.get_user_reading_sessions(config.show_data)
 
         for session in query_data:
             article_id = session.article_id
