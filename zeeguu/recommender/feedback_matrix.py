@@ -71,6 +71,8 @@ class FeedbackMatrix:
         print("Getting all user reading sessions")
         query = (
             UserReadingSession.query
+                .join(User, User.id == UserReadingSession.user_id)
+                .filter(User.is_dev == False)
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
