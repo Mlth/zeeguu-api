@@ -354,19 +354,13 @@ def article_recommendations_for_big_queries(query_body, es):
     start = time.time()
     thread_amount = len(os.sched_getaffinity(0)) #current amount of available cpus in sys that python can access
     final_article_mix = []
-    thread_ids = []
-
     thread_ids=range(0, thread_amount)
-
-    for id in thread_ids:
-        print(id)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(helper, id,query_body, es,thread_amount) for id in thread_ids]
     
-    resu = [f.result() for f in futures] 
-    for r in resu:
-        final_article_mix.extend(r)
+    for article in [f.result() for f in futures] :
+        final_article_mix.extend(article)
     
     end = time.time()
     print(end - start)
