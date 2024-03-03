@@ -15,7 +15,7 @@ from zeeguu.logging import log, logp
 from zeeguu.core import model
 from zeeguu.core.content_quality.quality_filter import sufficient_quality
 from zeeguu.core.emailer.zeeguu_mailer import ZeeguuMailer
-from zeeguu.core.model import Url, RSSFeed, LocalizedTopic
+from zeeguu.core.model import Url, Feed, LocalizedTopic
 import requests
 
 from zeeguu.core.model.article import MAX_CHAR_COUNT_IN_SUMMARY
@@ -25,6 +25,7 @@ from sentry_sdk import capture_exception as capture_to_sentry
 from zeeguu.core.elastic.indexing import index_in_elasticsearch
 
 from zeeguu.core.content_retriever import download_and_parse
+from zeeguu.core.content_retriever.parse_with_readability_server import TIMEOUT_SECONDS
 
 import zeeguu
 
@@ -67,7 +68,7 @@ def banned_url(url):
     return False
 
 
-def download_from_feed(feed: RSSFeed, session, limit=1000, save_in_elastic=True):
+def download_from_feed(feed: Feed, session, limit=1000, save_in_elastic=True):
     """
 
     Session is needed because this saves stuff to the DB.
@@ -275,6 +276,9 @@ def download_feed_item(session, feed, feed_item, url):
     except DataError as e:
         logp(f"Data error for: {url}")
 
+    except requests.exceptions.Timeout:
+        logp(f"The request from the server was timed out after {TIMEOUT_SECONDS} seconds.")
+        
     except Exception as e:
         import traceback
 
