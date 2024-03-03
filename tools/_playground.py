@@ -18,10 +18,10 @@ print("Starting playground")
 
 matrix = FeedbackMatrix()
 
-for i in range(5):
+for i in range(1):
     print("round", str(i))
     config = FeedbackMatrixConfig(
-        ShowData.RATED_DIFFICULTY, 
+        [ShowData.RATED_DIFFICULTY, ShowData.LIKED], 
         AdjustmentConfig(
             difficulty_weight=1,
             translation_adjustment_value=i,

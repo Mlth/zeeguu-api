@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 from zeeguu.core.model.article import Article
 from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
 from zeeguu.core.model.user import User
@@ -16,6 +16,7 @@ from collections import Counter
 from zeeguu.recommender.visualizer import Visualizer
 from enum import Enum, auto
 from zeeguu.core.model import db
+from sqlalchemy import or_
 
 import tensorflow as tf
 tf = tf.compat.v1
@@ -49,10 +50,9 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: ShowData, adjustment_config: AdjustmentConfig):
+    def __init__(self, show_data: List[ShowData], adjustment_config: AdjustmentConfig):
         self.show_data = show_data
         self.adjustment_config = adjustment_config
-
 
 class FeedbackMatrix:
     default_difficulty_weight = 1
@@ -67,7 +67,7 @@ class FeedbackMatrix:
 
     visualizer = Visualizer()
 
-    def get_user_reading_sessions(self, show_data: ShowData = ShowData.ALL):
+    def get_user_reading_sessions(self, show_data: List[ShowData] = ShowData.ALL):
         print("Getting all user reading sessions")
         query = (
             UserReadingSession.query
@@ -76,19 +76,22 @@ class FeedbackMatrix:
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
+                #.filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
         )
-        if show_data == ShowData.LIKED:
+        filters = []
+        if ShowData.LIKED in show_data:
             query = (
-                query.join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id))
-                .filter(UserArticle.liked == True)
+                query.join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id), isouter=True)
             )
-        elif show_data == ShowData.RATED_DIFFICULTY:
+            filters.append(UserArticle.liked == True)
+        if ShowData.RATED_DIFFICULTY in show_data:
             query = (
-                query.join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id))
-                .filter(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
+                query.join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id), isouter=True)
             )
+            filters.append(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
+        if len(filters) > 0:
+            query = query.filter(or_(*filters))
         return query.all()
 
     def get_sessions(self, config: FeedbackMatrixConfig):
