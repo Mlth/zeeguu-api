@@ -62,7 +62,6 @@ res = build_candidate_pool_for_user(534)
 
 print(len(res))
 
-
 '''
 #es2 = article_recommendations_for_user(u, 10)
 term = "Ukraine"
