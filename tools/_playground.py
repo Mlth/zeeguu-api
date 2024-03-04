@@ -58,7 +58,7 @@ print (res)
 #for r in res:
 #    print(r)
 
-res = build_candidate_pool_for_user(534)
+res = build_candidate_pool_for_user(534,app)
 
 print(len(res))
 

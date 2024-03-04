@@ -50,10 +50,10 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
         print(f"Cannot search with No limit, returning all articles for {language}\n")
     return Article.find_by_language(lang)
     
-def build_candidate_pool_for_user(user_id: int) -> list[Article]:
+def build_candidate_pool_for_user(user_id: int,app) -> list[Article]:
     '''Returns a list of articles for a user with whatever constraints they have'''
     u = User.find_by_id(user_id)
     print(u.learned_language)
     count = len(Article.find_by_language(u.learned_language))
     print(count)
-    return article_recommendations_for_user(u,count)
+    return article_recommendations_for_user(app,u,count)
