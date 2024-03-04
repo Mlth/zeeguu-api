@@ -84,7 +84,6 @@ def _prepare_user_constraints(user):
 
 
 def article_recommendations_for_user(
-    app,
     user,
     count,
     es_scale="3d",
@@ -133,7 +132,7 @@ def article_recommendations_for_user(
 
     #big count uses scroll api instead to chunk it in to manageable parts
     if count > 1000:
-        return article_recommendations_for_big_queries(app,query_body, es)
+        return article_recommendations_for_big_queries(query_body, es)
 
     res = es.search(index=ES_ZINDEX, body=query_body)
     
@@ -317,8 +316,7 @@ def _difficuty_level_bounds(level):
         upper_bounds = 8
     return lower_bounds, upper_bounds
 
-def helper(id,query_body,es,thread_amount,app):
-    app.app_context().push()
+def helper(id,query_body,es,thread_amount):
     
     query_body_with_slice = {
     "slice": {
@@ -352,14 +350,14 @@ def helper(id,query_body,es,thread_amount,app):
 
     return sorted_articles
 
-def article_recommendations_for_big_queries(app,query_body, es):
+def article_recommendations_for_big_queries(query_body, es):
     start = time.time()
     thread_amount = len(os.sched_getaffinity(0)) #current amount of available cpus in sys that python can access
     final_article_mix = []
     thread_ids=range(0, thread_amount)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(helper, id,query_body, es,thread_amount,app) for id in thread_ids]
+        futures = [executor.submit(helper, id,query_body, es,thread_amount) for id in thread_ids]
     
     for article in [f.result() for f in futures] :
         final_article_mix.extend(article)
