@@ -1,9 +1,16 @@
 import os
+from enum import Enum, auto
 
 resource_path = script_dir = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
 upper_bound_reading_speed = 20
 lower_bound_reading_speed = -20
+
+class ShowData(Enum):
+    ALL = auto()
+    LIKED = auto()
+    RATED_DIFFICULTY = auto()
+    NEW_DATA = auto()
 
 def get_expected_reading_time(word_count, offset):
     # The higher the offset is, the higher we want the WPM to be. When WPM is larger, the user is expected to be able to read faster.

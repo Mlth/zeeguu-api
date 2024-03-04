@@ -16,21 +16,22 @@ app.app_context().push()
 
 print("Starting playground")
 
-matrix = FeedbackMatrix()
-
-for i in range(1):
+for i in range(5):
     print("round", str(i))
+
     config = FeedbackMatrixConfig(
-        [ShowData.RATED_DIFFICULTY, ShowData.LIKED], 
+        [ShowData.ALL, ShowData.NEW_DATA], 
         AdjustmentConfig(
             difficulty_weight=1,
             translation_adjustment_value=i,
         )
     )
 
-    matrix.generate_dfs(config)
+    matrix = FeedbackMatrix(config)
 
-    matrix.plot_sessions_df("test/run-" + str(i))
+    matrix.generate_dfs()
+
+    matrix.plot_sessions_df("test/new_data-" + str(i))
 
     print("round", str(i), "done")
 
