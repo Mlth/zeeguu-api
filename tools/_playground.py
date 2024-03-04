@@ -22,8 +22,8 @@ for i in range(5):
     config = FeedbackMatrixConfig(
         [ShowData.ALL, ShowData.NEW_DATA], 
         AdjustmentConfig(
-            difficulty_weight=1,
-            translation_adjustment_value=i,
+            difficulty_weight=i,
+            translation_adjustment_value=1,
         )
     )
 
@@ -31,7 +31,7 @@ for i in range(5):
 
     matrix.generate_dfs()
 
-    matrix.plot_sessions_df("test/new_data-" + str(i))
+    matrix.plot_sessions_df("test/with_difficulty-" + str(i))
 
     print("round", str(i), "done")
 

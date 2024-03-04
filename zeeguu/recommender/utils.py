@@ -3,8 +3,8 @@ from enum import Enum, auto
 
 resource_path = script_dir = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
-upper_bound_reading_speed = 20
-lower_bound_reading_speed = -20
+upper_bound_reading_speed = 45
+lower_bound_reading_speed = -35
 
 class ShowData(Enum):
     ALL = auto()
@@ -20,7 +20,18 @@ def get_expected_reading_time(word_count, offset):
 def cefr_to_fk_difficulty(number):
     result = 0
 
-    if 0 <= number <= 10:
+    if 0 <= number <= 20:
+        result = 1
+    elif 21 <= number <= 40:
+        result = 2
+    elif 41 <= number <= 60:
+        result = 3
+    elif 61 <= number <= 80:
+        result = 4
+    elif 81 <= number <= 100:
+        result = 5
+
+    '''if 0 <= number <= 10:
         result = 1
     elif 11 <= number <= 20:
         result = 2
@@ -31,15 +42,15 @@ def cefr_to_fk_difficulty(number):
     elif 41 <= number <= 50:
         result = 5
     elif 51 <= number <= 100:
-        result = 6
+        result = 6'''
 
     return result
 
 def get_diff_in_article_and_user_level(article_diff, user_level, weight):
     if article_diff > user_level:
-        diff = 1 + ((article_diff - user_level) / 10)
+        diff = 1 + (((article_diff - user_level) / 100) * weight)
     elif article_diff < user_level:
-        diff = 1 - ((user_level - article_diff) / 10)
+        diff = 1 - (((user_level - article_diff) / 100) * weight)
     else:
         diff = 1
 

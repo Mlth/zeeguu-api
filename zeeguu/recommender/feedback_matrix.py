@@ -151,7 +151,7 @@ class FeedbackMatrix:
 
         for session in sessions.keys():
             sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
-            #sessions[session].session_duration = self.get_difficulty_adjustment(sessions[session], config.adjustment_config.difficulty_weight)
+            sessions[session].session_duration = self.get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight)
 
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
@@ -175,13 +175,13 @@ class FeedbackMatrix:
                 .first()
         )
         
-        user_level = 1
-        if user_level_query is not None and user_level_query[0] != 0 and user_level_query[0] is not None and user_level_query[0] != [] and user_level_query != []:
-            user_level = user_level_query[0]
+        if user_level_query is None or user_level_query[0] == 0 or user_level_query[0] is None or user_level_query[0] == [] or user_level_query == []:
+            return session.session_duration
+        user_level = user_level_query[0]
 
         difficulty = session.difficulty
         fk_difficulty = cefr_to_fk_difficulty(difficulty)
-        return get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
+        return session.session_duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
 
     def get_translation_adjustment(self, session: FeedbackMatrixSession, adjustment_value):
         timesTranslated = UserActivityData.translated_words_for_article(session.user_id, session.article_id)
