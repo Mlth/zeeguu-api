@@ -73,7 +73,7 @@ class FeedbackMatrix:
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                #.filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
+                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
         )
         or_filters = []
