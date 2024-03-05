@@ -332,19 +332,25 @@ def helper(id,query_body,es,thread_amount) -> list[candidate]:
     res = es.search(
         index=ES_ZINDEX,
         body=query_body_with_slice,
-        scroll='1m',
-        size=100,
+        scroll='2s',
+        size=256,
     )
     scroll_id = res["_scroll_id"]
-    mix = []
+    count = res['hits']['total']['value']
+    mix = [None] * count
     hits = res['hits']['hits']
-    mix.extend(candidate(hit['_id'], hit['_score']) for hit in hits)
+    ptr = 0 
+    for _, hit in enumerate(hits):
+        mix[ptr] = candidate(hit['_id'], hit['_score'])
+        ptr += 1 
     while len(hits) > 0:
         try:
             scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
             scroll_id = scan_results['_scroll_id']
             hits = scan_results['hits']['hits']
-            mix.extend(candidate(hit['_id'], hit['_score']) for hit in hits)
+            for _, hit in enumerate(hits):
+                mix[ptr] = candidate(hit['_id'], hit['_score'])
+                ptr += 1 
         except Exception as e:
             print(f"Error occurred during scroll: {e}")
             break
@@ -367,7 +373,6 @@ def article_recommendations_for_big_queries(query_body, es) -> list[candidate]:
        final_candidate_mix.extend(candidate)
     
     sorted_candidates = sorted(final_candidate_mix, key=lambda candidate: candidate.score)
-
     end = time.time()
     print(end - start)
     return sorted_candidates
