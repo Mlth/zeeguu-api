@@ -66,7 +66,7 @@ def articles_from_candidates(candidates):
     articles = Article.query.filter_by(broken=0).filter(Article.id.in_(article_ids)).all()
     return articles
 
-def articles_from_candidates_2(candidates):
+'''def articles_from_candidates_2(candidates):
     article_ids = {c.article_id for c in candidates}
     max_id = candidates[len(candidates)-1].article_id
     min_id = candidates[0].article_id
@@ -80,17 +80,8 @@ def articles_from_candidates_2(candidates):
 
     filtered_articles = [a for a in articles if a.id in article_ids]
 
-    return filtered_articles
+    return filtered_articles'''
 
-start = time.time()
-
-articles = articles_from_candidates_2(res)
-
-end = time.time()
-print(end - start)
-print(articles[0])
-
-print("query time:", len(res))
 
 '''
 #es2 = article_recommendations_for_user(u, 10)
