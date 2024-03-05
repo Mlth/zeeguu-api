@@ -14,7 +14,6 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
     if(limit!=None):
         es = Elasticsearch(ES_CONN_STRING)
         if(search == None):
-            print("Running recommendation")
             query_body = build_elastic_recommender_query(
                 limit,
                 "",
@@ -28,7 +27,6 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
 
             )
         else:
-            print("Running search")
             query_body = build_elastic_search_query(
                 limit,
                 search,
@@ -51,7 +49,5 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
 def build_candidate_pool_for_user(user_id: int) -> list[candidate]:
     '''Returns a list of articles for a user with whatever constraints they have'''
     u = User.find_by_id(user_id)
-    print(u.learned_language)
     count = len(Article.find_by_language(u.learned_language))
-    print(count)
     return article_recommendations_for_user(u,count)
