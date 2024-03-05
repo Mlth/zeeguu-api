@@ -6,7 +6,7 @@
    - topics, language and user subscriptions.
 
 """
-
+from collections import namedtuple
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, SF
 import concurrent.futures
@@ -316,7 +316,11 @@ def _difficuty_level_bounds(level):
         upper_bounds = 8
     return lower_bounds, upper_bounds
 
-def helper(id,query_body,es,thread_amount):
+
+candidate = namedtuple('candidate', ['article_id', 'score'])
+
+
+def helper(id,query_body,es,thread_amount) -> list[candidate]:
     
     query_body_with_slice = {
     "slice": {
@@ -334,34 +338,36 @@ def helper(id,query_body,es,thread_amount):
     scroll_id = res["_scroll_id"]
     mix = []
     hits = res['hits']['hits']
-    mix.extend(_to_articles_from_ES_hits(hits))
+    mix.extend(candidate(hit['_id'], hit['_score']) for hit in hits)
     while len(hits) > 0:
         try:
             scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
             scroll_id = scan_results['_scroll_id']
             hits = scan_results['hits']['hits']
-            mix.extend(_to_articles_from_ES_hits(hits))
+            mix.extend(candidate(hit['_id'], hit['_score']) for hit in hits)
         except Exception as e:
             print(f"Error occurred during scroll: {e}")
             break
-    articles = [a for a in mix if a is not None and not a.broken]
-    sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
+    #articles = [a for a in mix if a is not None and not a.broken]
+    #sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
     es.clear_scroll(scroll_id=scroll_id)
 
-    return sorted_articles
+    return mix
 
-def article_recommendations_for_big_queries(query_body, es):
+def article_recommendations_for_big_queries(query_body, es) -> list[candidate]:
     start = time.time()
     thread_amount = len(os.sched_getaffinity(0)) #current amount of available cpus in sys that python can access
-    final_article_mix = []
+    final_candidate_mix = []
     thread_ids=range(0, thread_amount)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(helper, id,query_body, es,thread_amount) for id in thread_ids]
     
-    for article in [f.result() for f in futures] :
-        final_article_mix.extend(article)
+    for candidate in [f.result() for f in futures] :
+       final_candidate_mix.extend(candidate)
     
+    sorted_candidates = sorted(final_candidate_mix, key=lambda candidate: candidate.score)
+
     end = time.time()
     print(end - start)
-    return final_article_mix
+    return sorted_candidates

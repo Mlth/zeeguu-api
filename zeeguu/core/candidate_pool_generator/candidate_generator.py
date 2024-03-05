@@ -3,10 +3,8 @@ from zeeguu.core.model import Article, User
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_recommender_query,build_elastic_search_query
-from zeeguu.core.content_recommender.elastic_recommender import _to_articles_from_ES_hits, article_recommendations_for_user
-from collections import namedtuple
+from zeeguu.core.content_recommender.elastic_recommender import _to_articles_from_ES_hits, article_recommendations_for_user, candidate
 
-candidate = namedtuple('candidate', ['article_id', 'score'])
 
 def build_candidate_pool_for_lang(language: str,search: str = None, limit: int = None) -> list[candidate]:
     '''Input must be in lowercase short form
