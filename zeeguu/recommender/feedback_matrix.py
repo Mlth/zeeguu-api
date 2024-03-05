@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import pandas as pd
 from zeeguu.core.model import db
-import numpy as np
 from collections import Counter
 from zeeguu.recommender.visualizer import Visualizer
 from zeeguu.core.model import db
@@ -58,6 +57,9 @@ class FeedbackMatrix:
     have_read_sessions = None
     feedback_diff_list_toprint = None
     feedback_counter = 0
+
+    num_of_users = None
+    num_of_articles = None
 
     visualizer = Visualizer()
 
@@ -219,12 +221,12 @@ class FeedbackMatrix:
 
         indices = self.liked_sessions_df[['user_id', 'article_id']].values
         values = self.liked_sessions_df['expected_read'].values
-        num_of_users = User.num_of_users()
-        num_of_articles = Article.num_of_articles()
+        self.num_of_users = User.num_of_users()
+        self.num_of_articles = Article.num_of_articles()
         tensor = tf.SparseTensor(
             indices=indices,
             values=values,
-            dense_shape=[num_of_users, num_of_articles]
+            dense_shape=[self.num_of_users, self.num_of_articles]
         )
         self.tensor = tensor
 
