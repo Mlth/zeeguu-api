@@ -22,7 +22,7 @@ u = User.find_by_id(534)
 print(u.name)
 lan = u.learned_language
 
-'''
+
 res = ElasticQuery(
     10,
     "cake",
@@ -37,16 +37,11 @@ res = ElasticQuery(
 print (res)
 '''
 
-#res = build_candidate_pool_for_lang("en", "trump")
-#print(len(res))
-
-#for r in res:
-#    print(r)
-
 res = build_candidate_pool_for_user(534)
 
 
-'''def articles_from_candidates_2(candidates):
+'''
+def articles_from_candidates_2(candidates):
     article_ids = {c.article_id for c in candidates}
     max_id = candidates[len(candidates)-1].article_id
     min_id = candidates[0].article_id
@@ -61,48 +56,12 @@ res = build_candidate_pool_for_user(534)
     filtered_articles = [a for a in articles if a.id in article_ids]
 
     return filtered_articles'''
+'''
+
+'''
 
 
 '''
-#es2 = article_recommendations_for_user(u, 10)
-term = "Ukraine"
-
-res = article_search_for_user(u,20,term)
-print(f"\nSearching for {term}\n")
-for r in res: 
-    print(r.topics)
-
-print("\nSearching for standard recommendations\n The ones you see on the zeeguu main page\n")
-res2 = article_recommendations_for_user(u,4)
-
-for r in res2:
-    print(r)
-
-#print(res2)
-
-
-res = ElasticQuery(
-    10,
-    "cake",
-    "sports, politics",
-    "",
-    "",
-    "",
-    lan,
-    10,
-    1
-)
-print (res)
-
-
-index_all_articles(db.session)
-
-#es2 = article_recommendations_for_user(u, 10)
-
-#print(res2)
-
-
-
 conn = db.engine.raw_connection()
 
 query = """
@@ -158,4 +117,5 @@ for i in range(5):
 
     print("round", str(i), "done")
 
+'''
 print("Ending playground")
