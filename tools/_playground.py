@@ -1,4 +1,5 @@
 import sys
+import time
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData, UserArticle
@@ -60,7 +61,36 @@ print (res)
 
 res = build_candidate_pool_for_user(534)
 
-print(len(res))
+def articles_from_candidates(candidates):
+    article_ids = [c.article_id for c in candidates]
+    articles = Article.query.filter_by(broken=0).filter(Article.id.in_(article_ids)).all()
+    return articles
+
+def articles_from_candidates_2(candidates):
+    article_ids = {c.article_id for c in candidates}
+    max_id = candidates[len(candidates)-1].article_id
+    min_id = candidates[0].article_id
+
+    print("max", max_id)
+    print("min", min_id)
+
+    articles = Article.query.filter_by(broken=0).filter(Article.id >= min_id).filter(Article.id <= max_id).all()
+
+    print(len(articles))
+
+    filtered_articles = [a for a in articles if a.id in article_ids]
+
+    return filtered_articles
+
+start = time.time()
+
+articles = articles_from_candidates_2(res)
+
+end = time.time()
+print(end - start)
+print(articles[0])
+
+print("query time:", len(res))
 
 '''
 #es2 = article_recommendations_for_user(u, 10)
