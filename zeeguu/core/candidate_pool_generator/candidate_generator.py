@@ -1,5 +1,5 @@
 from zeeguu.core.model import Language
-from zeeguu.core.model import Article, User
+from zeeguu.core.model import Article, UserReadingSession, User
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_recommender_query,build_elastic_search_query
@@ -45,9 +45,23 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
     if(search != None):
         print(f"Cannot search with No limit, returning all articles for {language}\n")
     return Article.find_by_language(lang)
+
     
 def build_candidate_pool_for_user(user_id: int) -> list[candidate]:
     '''Returns a list of articles for a user with whatever constraints they have'''
     u = User.find_by_id(user_id)
     count = len(Article.find_by_language(u.learned_language))
     return article_recommendations_for_user(u,count)
+
+
+def initial_candidate_pool() -> list[Article]:
+    query = (
+        Article.query
+         .filter_by(broken=0)
+         .join(UserReadingSession, Article.id == UserReadingSession.article_id)
+         .distinct()
+         .all())
+
+    return query
+
+
