@@ -3,12 +3,10 @@ from zeeguu.core.model import Article, User
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_recommender_query,build_elastic_search_query
-from zeeguu.core.content_recommender.elastic_recommender import _to_articles_from_ES_hits, article_recommendations_for_user
+from zeeguu.core.content_recommender.elastic_recommender import _to_articles_from_ES_hits, article_recommendations_for_user, candidate
 
 
-
-
-def build_candidate_pool_for_lang(language: str,search: str = None, limit: int = None) -> list[Article]:
+def build_candidate_pool_for_lang(language: str,search: str = None, limit: int = None) -> list[candidate]:
     '''Input must be in lowercase short form
     Examples: en, da, ru.. without limit you get about 30.000 articles returned here, its optional
     call with true if you want to do a search, otherwise it will recommend'''
@@ -16,7 +14,6 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
     if(limit!=None):
         es = Elasticsearch(ES_CONN_STRING)
         if(search == None):
-            print("Running recommendation")
             query_body = build_elastic_recommender_query(
                 limit,
                 "",
@@ -30,7 +27,6 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
 
             )
         else:
-            print("Running search")
             query_body = build_elastic_search_query(
                 limit,
                 search,
@@ -50,10 +46,8 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
         print(f"Cannot search with No limit, returning all articles for {language}\n")
     return Article.find_by_language(lang)
     
-def build_candidate_pool_for_user(user_id: int) -> list[Article]:
+def build_candidate_pool_for_user(user_id: int) -> list[candidate]:
     '''Returns a list of articles for a user with whatever constraints they have'''
     u = User.find_by_id(user_id)
-    print(u.learned_language)
     count = len(Article.find_by_language(u.learned_language))
-    print(count)
     return article_recommendations_for_user(u,count)
