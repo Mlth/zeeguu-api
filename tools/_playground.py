@@ -61,10 +61,6 @@ print (res)
 
 res = build_candidate_pool_for_user(534)
 
-def articles_from_candidates(candidates):
-    article_ids = [c.article_id for c in candidates]
-    articles = Article.query.filter_by(broken=0).filter(Article.id.in_(article_ids)).all()
-    return articles
 
 '''def articles_from_candidates_2(candidates):
     article_ids = {c.article_id for c in candidates}

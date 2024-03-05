@@ -319,7 +319,7 @@ def _difficuty_level_bounds(level):
 
 candidate = namedtuple('candidate', ['article_id', 'score'])
 
-
+#helper function only called by article_recommendations_for_big_queries
 def helper(id,query_body,es,thread_amount) -> list[candidate]:
     
     query_body_with_slice = {
@@ -332,8 +332,8 @@ def helper(id,query_body,es,thread_amount) -> list[candidate]:
     res = es.search(
         index=ES_ZINDEX,
         body=query_body_with_slice,
-        scroll='2s',
-        size=256,
+        scroll='2s', #keep alive time 
+        size=256, # number of hits per slice
     )
     scroll_id = res["_scroll_id"]
     count = res['hits']['total']['value']
@@ -354,25 +354,30 @@ def helper(id,query_body,es,thread_amount) -> list[candidate]:
         except Exception as e:
             print(f"Error occurred during scroll: {e}")
             break
-    #articles = [a for a in mix if a is not None and not a.broken]
-    #sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
+    
     es.clear_scroll(scroll_id=scroll_id)
 
     return mix
 
 def article_recommendations_for_big_queries(query_body, es) -> list[candidate]:
-    start = time.time()
     thread_amount = len(os.sched_getaffinity(0)) #current amount of available cpus in sys that python can access
     final_candidate_mix = []
     thread_ids=range(0, thread_amount)
 
+    #allocate a thread for each slice in elastic and execute es.search for them in parrallel 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(helper, id,query_body, es,thread_amount) for id in thread_ids]
     
-    for candidate in [f.result() for f in futures] :
-       final_candidate_mix.extend(candidate)
+    for c in [f.result() for f in futures]:
+        final_candidate_mix.extend(c)
+
+    #remove any articles that are broken and sort by score ascending
+    article_ids = [c.article_id for c in final_candidate_mix]
+    articles = Article.query.filter_by(broken=1).filter(Article.id.in_(article_ids)).all()
+    article_ids_to_remove = {a.id for a in articles} 
+    candidates_with_scores = [
+    candidate(article_id=c.article_id, score=c.score) for c in final_candidate_mix if int(c.article_id) not in article_ids_to_remove
+    ]
+    sorted_candidates = sorted(candidates_with_scores, key=lambda candidate: candidate.score)
     
-    sorted_candidates = sorted(final_candidate_mix, key=lambda candidate: candidate.score)
-    end = time.time()
-    print(end - start)
     return sorted_candidates
