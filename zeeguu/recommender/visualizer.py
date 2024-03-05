@@ -1,20 +1,41 @@
+from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
-from zeeguu.recommender.utils import  days_since_normalizer, get_expected_reading_time, resource_path, lower_bound_reading_speed, upper_bound_reading_speed
+from zeeguu.recommender.utils import  ShowData, days_since_normalizer, get_expected_reading_time, resource_path, lower_bound_reading_speed, upper_bound_reading_speed
 import tensorflow as tf
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 
 class Visualizer:
-
     def get_diff_color(self, df, precise=False):
         if precise:
             return np.where(df['difficulty_feedback'] == 1, 'yellow', np.where(df['difficulty_feedback'] == 3, 'blue', 'black'))
         else:
             return "black"
 
-    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, simple=False):
+    def add_legend(self, show_data: List[ShowData], have_read_sessions, sessions_count):
+        legend = []
+
+        if have_read_sessions > 0:
+            have_read_ratio = have_read_sessions / sessions_count * 100
+            have_not_read_ratio = 100 - have_read_ratio
+            legend.append(plt.Line2D([0], [0], marker='', label=f"Expected read: {have_read_ratio:.2f}% ({have_read_sessions} sessions)"))
+            legend.append(plt.Line2D([0], [0], marker='', label=f"Expected not read: {have_not_read_ratio:.2f}% ({sessions_count - have_read_sessions} sessions)"))
+
+        for data in show_data:
+            if data == ShowData.LIKED or data == ShowData.ALL:
+                legend.append(plt.Line2D([0], [0], marker='o', color='g', label='green = liked'))
+            if data == ShowData.RATED_DIFFICULTY or data == ShowData.ALL:
+                legend.append(plt.Line2D([0], [0], marker='o', color='y', label='yellow = easy'))
+                legend.append(plt.Line2D([0], [0], marker='o', color='b', label='blue = ok'))
+                legend.append(plt.Line2D([0], [0], marker='o', color='k', label='black = difficult'))
+
+        legend.append(plt.Line2D([0], [0], marker='o', color='r', label='red = no feedback'))
+
+        plt.legend(handles=legend)
+
+    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, show_data: List[ShowData]):
         plt.clf()
         if len(df) == 0:
             print("No data to plot")
@@ -24,11 +45,11 @@ class Visualizer:
         y_min, y_max = 0, 2000
 
         plt.xlabel('Word count')
-        plt.ylabel('Duration')
+        plt.ylabel('Estimated reading time (seconds)')
 
         expected_read_color = np.where(df['liked'] == 1, 'green', 
                                     np.where(df['difficulty_feedback'] != 0, self.get_diff_color(df, True),
-                                        np.where(df['expected_read'] == 1, 'blue', 'red')))
+                                        'red'))
         plt.scatter(df['word_count'], df['session_duration'], alpha=[days_since_normalizer(d) for d in df['days_since']], color=expected_read_color)
 
         x_values = df['word_count']
@@ -44,14 +65,7 @@ class Visualizer:
         plt.grid(True)
         plt.rc('axes', axisbelow=True)
 
-        if have_read_sessions > 0:
-            have_read_ratio = have_read_sessions / len(df) * 100
-            have_not_read_ratio = 100 - have_read_ratio
-            plt.text(0, 1.1, f"Have read: {have_read_ratio:.2f}%", transform=plt.gca().transAxes)
-            plt.text(0, 1.05, f"Have not read: {have_not_read_ratio:.2f}%", transform=plt.gca().transAxes)
-            plt.text(0, 1.01, f"Green = liked, yellow = easy, blue = Ok, black = Difficult", transform=plt.gca().transAxes)
-        if simple:
-            plt.text(0, 1.01, f"Green = liked, yellow = easy, blue = Ok, black = Difficult", transform=plt.gca().transAxes)
+        self.add_legend(show_data, have_read_sessions, len(df))
 
         #Change to '.svg' and format to 'svg' for svg.
         plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
