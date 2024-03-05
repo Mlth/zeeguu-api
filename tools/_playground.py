@@ -15,29 +15,13 @@ from zeeguu.core.elastic.indexing import index_all_articles
 app = create_app()
 app.app_context().push()
 
+print("Starting playground")
+
 '''
-print("before the for")
-for id in User.all_recent_user_ids(150):
-    u = User.find_by_id(id)
-    print(u.name)
-    duration_old = exercises_duration_by_day(u)
-    duration_new = exercises_duration_by_day(u)
-    if duration_new != duration_old:
-        print("old way")
-        print(duration_old)
-        print("new way")
-        print(duration_new)
-
-=======
-print("Running playground")
-
-print("before the function")
-
-print("before test")
 u = User.find_by_id(534)
 print(u.name)
 lan = u.learned_language
-'''
+
 '''
 res = ElasticQuery(
     10,
@@ -157,48 +141,21 @@ lower_bound = True
 y_start = 50
 for i in range(5):
     print("round", str(i))
+
     config = FeedbackMatrixConfig(
-        ShowData.RATED_DIFFICULTY, 
+        [ShowData.ALL, ShowData.NEW_DATA], 
         AdjustmentConfig(
-            difficulty_weight=1,
-            translation_adjustment_value=i,
+            difficulty_weight=i,
+            translation_adjustment_value=1,
         )
     )
 
-    matrix.generate_dfs(config)
+    matrix = FeedbackMatrix(config)
 
-    matrix.plot_sessions_df("test/run-" + str(i))
+    matrix.generate_dfs()
+
+    matrix.plot_sessions_df("test/with_difficulty-" + str(i))
 
     print("round", str(i), "done")
 
-df = pd.read_sql_query(query, conn)
-#df.to_csv(sys.stdout, index=False)
-df.astype('int32').dtypes
-#df.plot(kind = 'scatter', x = 'duration', y = 'word_count', color='blue')
-
-#if upper_bound:
-#    x_values = df['duration']
-#    y_values_line = 20 * x_values + y_start
-#    plt.scatter(df['duration'], df['word_count'], label='Data Points')
-#    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-if lower_bound:
-    x_values = df['duration']
-    y_values_line = [y_start] * len(x_values)
-    plt.scatter(df['duration'], df['word_count'], label='Data Points')
-    plt.plot(x_values, y_values_line, color='red', label='y = 2x + 2')
-
-
-
-#conn.close()
-
-'''
-'''
-def initialize_all_focused_durations():
-    for session in db['user_reading_session'].all():
-
-        
-
-def initialize_focused_duration(user_id, article_id):
-    return
-'''
 print("Ending playground")
