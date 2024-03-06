@@ -6,6 +6,7 @@ from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
 from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
+from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
 from zeeguu.recommender.utils import cefr_to_fk_difficulty, get_diff_in_article_and_user_level, get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -71,6 +72,8 @@ class FeedbackMatrix:
         query = (
             UserReadingSession.query
                 .join(User, User.id == UserReadingSession.user_id)
+                .join(Article, Article.id == UserReadingSession.article_id)
+                .filter(Article.broken == 0)
                 .filter(User.is_dev == False)
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
@@ -219,16 +222,10 @@ class FeedbackMatrix:
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
 
-        indices = self.liked_sessions_df[['user_id', 'article_id']].values
-        values = self.liked_sessions_df['expected_read'].values
         self.num_of_users = User.num_of_users()
         self.num_of_articles = Article.num_of_articles()
-        tensor = tf.SparseTensor(
-            indices=indices,
-            values=values,
-            dense_shape=[self.num_of_users, self.num_of_articles]
-        )
-        self.tensor = tensor
+
+        self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.num_of_users, self.num_of_articles)
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")
