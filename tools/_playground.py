@@ -42,13 +42,12 @@ num_items = matrix.num_of_articles  # Example: total number of items
 
 recommender = RecommenderSystem(num_users, num_items)
 
-recommender.build_model(liked_sessions_df)
+#recommender.build_model(liked_sessions_df)
 
-recommender.cf_model.train()
+#recommender.cf_model.train()
 
-new_user_embeddings = recommender.cf_model.embeddings.get("user_id")
-new_article_embeddings = recommender.cf_model.embeddings.get("article_id")
-
+#new_user_embeddings = recommender.cf_model.embeddings.get("user_id")
+#new_article_embeddings = recommender.cf_model.embeddings.get("article_id")
 
 
 print("Ending playground")

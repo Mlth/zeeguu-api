@@ -10,13 +10,14 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 
 class RecommenderSystem:
     cf_model = None
+    user_embeddings = None
+    article_embeddings = None
 
     def __init__(self, num_users, num_items, embedding_dim=50, stddev=1.):
-        self.user_embeddings = tf.Variable(tf.random_normal([num_users, embedding_dim], stddev=stddev))
-        self.article_embeddings = tf.Variable(tf.random_normal([num_items, embedding_dim]), stddev=stddev)
         self.num_users = num_users
         self.num_items = num_items
         self.embedding_dim = embedding_dim
+        self.stddev = stddev
 
     def split_dataframe(self, df: DataFrame, holdout_fraction=0.1):
         """Splits a DataFrame into training and test sets.
@@ -37,16 +38,15 @@ class RecommenderSystem:
             sparse_sessions: A SparseTensor rating matrix, of dense_shape [N, M]
             user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
             dimension, such that U_i is the embedding of user i.
-            movie_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
+            article_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
             dimension, such that V_j is the embedding of movie j.
         Returns:
             A scalar Tensor representing the MSE between the true ratings and the
             model's predictions.
         """
-        predictions = tf.reduce_sum(
-            tf.gather(user_embeddings, sparse_sessions.indices[:, 0]) *
-            tf.gather(article_embeddings, sparse_sessions.indices[:, 1]),
-            axis=1)
+        predictions = tf.gather_nd(
+            tf.matmul(user_embeddings, article_embeddings, transpose_b=True),
+            sparse_sessions.indices)
         loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
         return loss
     
@@ -66,11 +66,14 @@ class RecommenderSystem:
         A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
         A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
 
+        self.user_embeddings = tf.Variable(tf.random_normal([A_train.dense_shape[0], self.embedding_dim], stddev=self.stddev))
+        self.article_embeddings = tf.Variable(tf.random_normal([A_train.dense_shape[1], self.embedding_dim], stddev=self.stddev))
+
         train_loss = self.sparse_mean_square_error(A_train, self.user_embeddings, self.article_embeddings)
-        #test_loss = self.sparse_mean_square_error(A_train, self.user_embeddings, self.article_embeddings)
+        test_loss = self.sparse_mean_square_error(A_test, self.user_embeddings, self.article_embeddings)
         metrics = {
             'train_error': train_loss,
-            'test_error': train_loss
+            'test_error': test_loss
         }
         embeddings = {
             "user_id": self.user_embeddings,
