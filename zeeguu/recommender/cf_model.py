@@ -27,7 +27,7 @@ class CFModel(object):
     """The embeddings dictionary."""
     return self._embeddings
 
-  def train(self, num_iterations=100, learning_rate=1.0, plot_results=True,
+  def train(self, num_iterations=1, learning_rate=1.0, plot_results=True,
             optimizer=tf.train.GradientDescentOptimizer):
     """Trains the model.
     Args:
@@ -83,4 +83,5 @@ class CFModel(object):
             ax.plot(iterations, v, label=k)
           ax.set_xlim([1, num_iterations])
           ax.legend()
+          
       return results

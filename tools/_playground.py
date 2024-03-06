@@ -25,7 +25,7 @@ app.app_context().push()
 print("Starting playground")
 
 matrix_config = FeedbackMatrixConfig(
-    show_data=[ShowData.ALL],
+    show_data=[ShowData.RATED_DIFFICULTY],
     adjustment_config=AdjustmentConfig(
         difficulty_weight=1,
         translation_adjustment_value=4
@@ -42,9 +42,9 @@ num_items = matrix.num_of_articles  # Example: total number of items
 
 recommender = RecommenderSystem(num_users, num_items)
 
-#recommender.build_model(liked_sessions_df)
+recommender.build_model(liked_sessions_df)
 
-#recommender.cf_model.train()
+recommender.cf_model.train()
 
 #new_user_embeddings = recommender.cf_model.embeddings.get("user_id")
 #new_article_embeddings = recommender.cf_model.embeddings.get("article_id")

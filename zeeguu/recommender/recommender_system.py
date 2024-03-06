@@ -10,10 +10,10 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 
 class RecommenderSystem:
     cf_model = None
-    user_embeddings = None
-    article_embeddings = None
 
     def __init__(self, num_users, num_items, embedding_dim=50, stddev=1.):
+        self.user_embeddings = tf.Variable(tf.random_normal([num_users, embedding_dim], stddev=stddev))
+        self.article_embeddings = tf.Variable(tf.random_normal([num_items, embedding_dim], stddev=stddev))
         self.num_users = num_users
         self.num_items = num_items
         self.embedding_dim = embedding_dim
@@ -65,9 +65,6 @@ class RecommenderSystem:
         # SparseTensor representation of the train and test datasets.
         A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
         A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
-
-        self.user_embeddings = tf.Variable(tf.random_normal([A_train.dense_shape[0], self.embedding_dim], stddev=self.stddev))
-        self.article_embeddings = tf.Variable(tf.random_normal([A_train.dense_shape[1], self.embedding_dim], stddev=self.stddev))
 
         train_loss = self.sparse_mean_square_error(A_train, self.user_embeddings, self.article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, self.user_embeddings, self.article_embeddings)
