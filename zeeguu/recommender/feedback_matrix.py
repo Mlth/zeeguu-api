@@ -230,9 +230,6 @@ class FeedbackMatrix:
         liked_df = self.__session_list_to_df(liked_sessions)
         #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
 
-        #print(self.article_order_to_id) 
-        #print(self.user_order_to_id)
-
         self.sessions_df = df
         self.liked_sessions_df = liked_df
         self.have_read_sessions = have_read_sessions
