@@ -1,4 +1,5 @@
 import sys
+import time
 from elasticsearch import Elasticsearch
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
 from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData, UserArticle
@@ -6,7 +7,7 @@ import pandas as pd
 from zeeguu.core.model import db
 import pyarrow as pa # needed for pandas
 from zeeguu.api.app import create_app
-from zeeguu.core.candidate_pool_generator.candidate_generator import build_candidate_pool_for_lang, build_candidate_pool_for_user
+from zeeguu.core.candidate_pool_generator.candidate_generator import build_candidate_pool_for_lang, build_candidate_pool_for_user, initial_candidate_pool
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig, ShowData
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
 from zeeguu.core.elastic.indexing import index_all_articles
@@ -23,6 +24,8 @@ app = create_app()
 app.app_context().push()
 
 print("Starting playground")
+sesh = db.session
+initial_candidate_pool()
 
 matrix_config = FeedbackMatrixConfig(
     show_data=[ShowData.RATED_DIFFICULTY],
@@ -41,17 +44,10 @@ num_users = matrix.num_of_users
 num_items = matrix.num_of_articles
 
 #recommender = RecommenderSystem(500, 500)
-recommender = RecommenderSystem(num_users, num_items)
+#recommender = RecommenderSystem(num_users, num_items)
 
-recommender.build_model(liked_sessions_df)
+#recommender.build_model(liked_sessions_df)
 
-recommender.cf_model.train()
-
-#new_user_embeddings = recommender.cf_model.embeddings.get("user_id")
-#new_article_embeddings = recommender.cf_model.embeddings.get("article_id")
-
-#print(new_user_embeddings)
-#print(new_article_embeddings)
-
+#recommender.cf_model.train()
 
 print("Ending playground")

@@ -6,11 +6,12 @@
    - topics, language and user subscriptions.
 
 """
-
+from collections import namedtuple
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, SF
 import concurrent.futures
 import time
+import os
 
 from zeeguu.core.model import (
     Article,
@@ -315,52 +316,68 @@ def _difficuty_level_bounds(level):
         upper_bounds = 8
     return lower_bounds, upper_bounds
 
-def helper(num):
-    return num + 5
 
-def article_recommendations_for_big_queries(query_body, es):
-    start = time.time()
-    threads = 8
+candidate = namedtuple('candidate', ['article_id', 'score'])
+
+#helper function only called by article_recommendations_for_big_queries
+def helper(id,query_body,es,thread_amount) -> list[candidate]:
+    
     query_body_with_slice = {
     "slice": {
-        "id": 0,  # Set the slice id
-        "max": threads   # Set the maximum number of slices
+        "id": id,  # Set the slice id
+        "max": thread_amount   # Set the maximum number of slices
     },
     **query_body  # Merge the original query body with the slice parameter
     }
-
     res = es.search(
         index=ES_ZINDEX,
         body=query_body_with_slice,
-        scroll='2m',
-        size=100
+        scroll='2s', #keep alive time 
+        size=256, # number of hits per slice
     )
-    lst = [1,2,3,4,5,6,7,8]
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(helper, n) for n in lst]
-    
-    resu = [f.result() for f in futures] 
-    for r in resu:
-        print(r)
-
     scroll_id = res["_scroll_id"]
-    total_docs = res['hits']['total']['value']
-    print(f"Total documents: {total_docs}")
-    final_article_mix = []
+    count = res['hits']['total']['value']
+    mix = [None] * count
     hits = res['hits']['hits']
-    final_article_mix.extend(_to_articles_from_ES_hits(hits))
+    ptr = 0 
+    for _, hit in enumerate(hits):
+        mix[ptr] = candidate(hit['_id'], hit['_score'])
+        ptr += 1 
     while len(hits) > 0:
         try:
             scan_results = es.scroll(scroll_id=scroll_id, scroll='2m')
             scroll_id = scan_results['_scroll_id']
             hits = scan_results['hits']['hits']
-            final_article_mix.extend(_to_articles_from_ES_hits(hits))
+            for _, hit in enumerate(hits):
+                mix[ptr] = candidate(hit['_id'], hit['_score'])
+                ptr += 1 
         except Exception as e:
             print(f"Error occurred during scroll: {e}")
             break
-    articles = [a for a in final_article_mix if a is not None and not a.broken]
-    sorted_articles = sorted(articles, key=lambda x: x.published_time, reverse=True)
+    
     es.clear_scroll(scroll_id=scroll_id)
-    end = time.time()
-    print(end - start)
-    return sorted_articles
+
+    return mix
+
+def article_recommendations_for_big_queries(query_body, es) -> list[candidate]:
+    thread_amount = len(os.sched_getaffinity(0)) #current amount of available cpus in sys that python can access
+    final_candidate_mix = []
+    thread_ids=range(0, thread_amount)
+
+    #allocate a thread for each slice in elastic and execute es.search for them in parrallel 
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(helper, id,query_body, es,thread_amount) for id in thread_ids]
+    
+    for c in [f.result() for f in futures]:
+        final_candidate_mix.extend(c)
+
+    #remove any articles that are broken and sort by score ascending
+    article_ids = [c.article_id for c in final_candidate_mix]
+    articles = Article.query.filter_by(broken=1).filter(Article.id.in_(article_ids)).all()
+    article_ids_to_remove = {a.id for a in articles} 
+    candidates_with_scores = [
+    candidate(article_id=c.article_id, score=c.score) for c in final_candidate_mix if int(c.article_id) not in article_ids_to_remove
+    ]
+    sorted_candidates = sorted(candidates_with_scores, key=lambda candidate: candidate.score)
+    
+    return sorted_candidates
