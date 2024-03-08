@@ -63,7 +63,9 @@ class FeedbackMatrix:
     num_of_articles = None
 
     article_order_to_id = {}
+    article_id_to_order = {}
     user_order_to_id = {}
+    user_id_to_order = {}
 
     visualizer = Visualizer()
 
@@ -203,6 +205,7 @@ class FeedbackMatrix:
         index = 0
         for article in articles:
             self.article_order_to_id[index] = article.id
+            self.article_id_to_order[article.id] = index
             index += 1
 
     def set_user_order_to_id(self):
@@ -210,19 +213,25 @@ class FeedbackMatrix:
         index = 0
         for user in users:
             self.user_order_to_id[index] = user.id
+            self.user_id_to_order[user.id] = index
             index += 1
 
     def generate_dfs(self):
+        self.set_article_order_to_id()
+        self.set_user_order_to_id()
+
         sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
+
+        for i in range(len(liked_sessions)):
+            liked_sessions[i].user_id = self.user_id_to_order.get(liked_sessions[i].user_id)
+            liked_sessions[i].article_id = self.article_id_to_order.get(liked_sessions[i].article_id)
+
         df = self.__session_map_to_df(sessions)
         liked_df = self.__session_list_to_df(liked_sessions)
         #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
 
-        self.set_article_order_to_id()
-        self.set_user_order_to_id()
-
-        print(self.article_order_to_id) 
-        print(self.user_order_to_id)
+        #print(self.article_order_to_id) 
+        #print(self.user_order_to_id)
 
         self.sessions_df = df
         self.liked_sessions_df = liked_df
@@ -238,7 +247,6 @@ class FeedbackMatrix:
         # Pretty weird logic. We convert a list to a dict and then to a dataframe. Should be changed.
         data = {index: vars(session) for index, session in enumerate(sessions)}
         df = pd.DataFrame.from_dict(data, orient='index')
-        print(df)
         return df
 
     def build_sparse_tensor(self, force=False):
