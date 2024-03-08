@@ -27,7 +27,7 @@ class CFModel(object):
     """The embeddings dictionary."""
     return self._embeddings
 
-  def train(self, num_iterations=1, learning_rate=1.0, plot_results=True,
+  def train(self, num_iterations=20, learning_rate=1, plot_results=True,
             optimizer=tf.train.GradientDescentOptimizer):
     """Trains the model.
     Args:
@@ -64,6 +64,7 @@ class CFModel(object):
           print("\r iteration %d: " % i + ", ".join(
                 ["%s=%f" % (k, v) for r in results for k, v in r.items()]),
                 end='')
+          print()
           iterations.append(i)
           for metric_val, result in zip(metrics_vals, results):
             for k, v in result.items():

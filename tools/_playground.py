@@ -37,17 +37,21 @@ matrix.build_sparse_tensor()
 liked_sessions_df = matrix.liked_sessions_df
 
 # Define embedding layers for users and items
-num_users = matrix.num_of_users  # Example: total number of users
-num_items = matrix.num_of_articles  # Example: total number of items
+num_users = matrix.num_of_users
+num_items = matrix.num_of_articles
 
+#recommender = RecommenderSystem(500, 500)
 recommender = RecommenderSystem(num_users, num_items)
 
-recommender.build_model(liked_sessions_df)
+#recommender.build_model(liked_sessions_df)
 
-recommender.cf_model.train()
+#recommender.cf_model.train()
 
 #new_user_embeddings = recommender.cf_model.embeddings.get("user_id")
 #new_article_embeddings = recommender.cf_model.embeddings.get("article_id")
+
+#print(new_user_embeddings)
+#print(new_article_embeddings)
 
 
 print("Ending playground")

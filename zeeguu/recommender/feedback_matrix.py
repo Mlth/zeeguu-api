@@ -62,6 +62,9 @@ class FeedbackMatrix:
     num_of_users = None
     num_of_articles = None
 
+    article_order_to_id = {}
+    user_order_to_id = {}
+
     visualizer = Visualizer()
 
     def __init__(self, config: FeedbackMatrixConfig):
@@ -195,10 +198,31 @@ class FeedbackMatrix:
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
 
+    def set_article_order_to_id(self):
+        articles = Article.query.filter(Article.broken == 0).all()
+        index = 0
+        for article in articles:
+            self.article_order_to_id[index] = article.id
+            index += 1
+
+    def set_user_order_to_id(self):
+        users = User.query.filter(User.is_dev == False).all()
+        index = 0
+        for user in users:
+            self.user_order_to_id[index] = user.id
+            index += 1
+
     def generate_dfs(self):
         sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
         df = self.__session_map_to_df(sessions)
         liked_df = self.__session_list_to_df(liked_sessions)
+        #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+
+        self.set_article_order_to_id()
+        self.set_user_order_to_id()
+
+        print(self.article_order_to_id) 
+        print(self.user_order_to_id)
 
         self.sessions_df = df
         self.liked_sessions_df = liked_df
@@ -214,6 +238,7 @@ class FeedbackMatrix:
         # Pretty weird logic. We convert a list to a dict and then to a dataframe. Should be changed.
         data = {index: vars(session) for index, session in enumerate(sessions)}
         df = pd.DataFrame.from_dict(data, orient='index')
+        print(df)
         return df
 
     def build_sparse_tensor(self, force=False):
