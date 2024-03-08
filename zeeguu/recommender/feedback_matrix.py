@@ -6,12 +6,12 @@ from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
 from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
+from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
 from zeeguu.recommender.utils import cefr_to_fk_difficulty, get_diff_in_article_and_user_level, get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import pandas as pd
 from zeeguu.core.model import db
-import numpy as np
 from collections import Counter
 from zeeguu.recommender.visualizer import Visualizer
 from zeeguu.core.model import db
@@ -59,6 +59,14 @@ class FeedbackMatrix:
     feedback_diff_list_toprint = None
     feedback_counter = 0
 
+    num_of_users = None
+    num_of_articles = None
+
+    article_order_to_id = {}
+    article_id_to_order = {}
+    user_order_to_id = {}
+    user_id_to_order = {}
+
     visualizer = Visualizer()
 
     def __init__(self, config: FeedbackMatrixConfig):
@@ -69,11 +77,13 @@ class FeedbackMatrix:
         query = (
             UserReadingSession.query
                 .join(User, User.id == UserReadingSession.user_id)
+                .join(Article, Article.id == UserReadingSession.article_id)
+                .filter(Article.broken == 0)
                 .filter(User.is_dev == False)
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                #.filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
+                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
         )
         or_filters = []
@@ -190,10 +200,35 @@ class FeedbackMatrix:
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
 
+    def set_article_order_to_id(self):
+        articles = Article.query.filter(Article.broken == 0).all()
+        index = 0
+        for article in articles:
+            self.article_order_to_id[index] = article.id
+            self.article_id_to_order[article.id] = index
+            index += 1
+
+    def set_user_order_to_id(self):
+        users = User.query.filter(User.is_dev == False).all()
+        index = 0
+        for user in users:
+            self.user_order_to_id[index] = user.id
+            self.user_id_to_order[user.id] = index
+            index += 1
+
     def generate_dfs(self):
+        self.set_article_order_to_id()
+        self.set_user_order_to_id()
+
         sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
+
+        for i in range(len(liked_sessions)):
+            liked_sessions[i].user_id = self.user_id_to_order.get(liked_sessions[i].user_id)
+            liked_sessions[i].article_id = self.article_id_to_order.get(liked_sessions[i].article_id)
+
         df = self.__session_map_to_df(sessions)
         liked_df = self.__session_list_to_df(liked_sessions)
+        #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
 
         self.sessions_df = df
         self.liked_sessions_df = liked_df
@@ -217,16 +252,10 @@ class FeedbackMatrix:
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
 
-        indices = self.liked_sessions_df[['user_id', 'article_id']].values
-        values = self.liked_sessions_df['expected_read'].values
-        num_of_users = User.num_of_users()
-        num_of_articles = Article.num_of_articles()
-        tensor = tf.SparseTensor(
-            indices=indices,
-            values=values,
-            dense_shape=[num_of_users, num_of_articles]
-        )
-        self.tensor = tensor
+        self.num_of_users = User.num_of_users()
+        self.num_of_articles = Article.num_of_articles()
+
+        self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.num_of_users, self.num_of_articles)
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")

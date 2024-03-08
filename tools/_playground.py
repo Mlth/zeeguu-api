@@ -12,6 +12,14 @@ from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix,
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
 from zeeguu.core.elastic.indexing import index_all_articles
 
+import tensorflow as tf
+from zeeguu.recommender.recommender_system import RecommenderSystem
+
+from zeeguu.recommender.recommender_system import RecommenderSystem
+tf = tf.compat.v1
+tf.disable_v2_behavior()
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 app = create_app()
 app.app_context().push()
 
@@ -19,107 +27,27 @@ print("Starting playground")
 sesh = db.session
 initial_candidate_pool()
 
-
-'''
-u = User.find_by_id(534)
-print(u.name)
-lan = u.learned_language
-
-
-res = ElasticQuery(
-    10,
-    "cake",
-    "sports, politics",
-    "",
-    "",
-    "",
-    lan,
-    10,
-    1
+matrix_config = FeedbackMatrixConfig(
+    show_data=[ShowData.RATED_DIFFICULTY],
+    adjustment_config=AdjustmentConfig(
+        difficulty_weight=1,
+        translation_adjustment_value=4
+    ),
 )
-print (res)
-'''
+matrix = FeedbackMatrix(matrix_config)
+matrix.build_sparse_tensor()
 
-#res = build_candidate_pool_for_user(534)
+liked_sessions_df = matrix.liked_sessions_df
 
+# Define embedding layers for users and items
+num_users = matrix.num_of_users
+num_items = matrix.num_of_articles
 
+#recommender = RecommenderSystem(500, 500)
+#recommender = RecommenderSystem(num_users, num_items)
 
-'''
-def articles_from_candidates_2(candidates):
-    article_ids = {c.article_id for c in candidates}
-    max_id = candidates[len(candidates)-1].article_id
-    min_id = candidates[0].article_id
+#recommender.build_model(liked_sessions_df)
 
-    print("max", max_id)
-    print("min", min_id)
+#recommender.cf_model.train()
 
-    articles = Article.query.filter_by(broken=0).filter(Article.id >= min_id).filter(Article.id <= max_id).all()
-
-    print(len(articles))
-
-    filtered_articles = [a for a in articles if a.id in article_ids]
-
-    return filtered_articles'''
-'''
-
-'''
-
-
-'''
-conn = db.engine.raw_connection()
-
-query = """
-    SELECT * from user_reading_session urs
-    LEFT JOIN article a ON urs.article_id = a.id
-    WHERE urs.duration / a.word_count > 0.1
-"""
-
-query = """
-    SELECT
-        (urs.duration / 60 / 60) AS duration,
-        a.word_count
-    FROM
-        user_reading_session urs
-    LEFT JOIN
-        article a ON urs.article_id = a.id
-    JOIN
-        (SELECT article_id, COUNT(*) AS session_count
-        FROM user_reading_session
-        GROUP BY article_id
-        HAVING COUNT(*) >= 20) AS session_counts
-    ON
-        urs.article_id = session_counts.article_id
-    WHERE
-        urs.duration IS NOT NULL
-        AND a.word_count IS NOT NULL
-        AND urs.duration / 60 / 60 < 60
-        AND urs.duration / 60 / 60 >= 2
-        AND a.word_count < 2000
-"""
-
-
-upper_bound = True
-lower_bound = True
-
-y_start = 50
-for i in range(5):
-    print("round", str(i))
-
-    config = FeedbackMatrixConfig(
-        [ShowData.ALL, ShowData.NEW_DATA], 
-        AdjustmentConfig(
-            difficulty_weight=i,
-            translation_adjustment_value=1,
-        )
-    )
-
-    matrix = FeedbackMatrix(config)
-
-    matrix.generate_dfs()
-
-    matrix.plot_sessions_df("test/with_difficulty-" + str(i))
-
-    print("round", str(i), "done")
-
-'''
 print("Ending playground")
