@@ -34,6 +34,7 @@ matrix_config = FeedbackMatrixConfig(
         translation_adjustment_value=4
     ),
 )
+
 matrix = FeedbackMatrix(matrix_config)
 matrix.build_sparse_tensor()
 

@@ -59,18 +59,16 @@ class FeedbackMatrix:
     feedback_diff_list_toprint = None
     feedback_counter = 0
 
-    num_of_users = None
-    num_of_articles = None
-
     article_order_to_id = {}
     article_id_to_order = {}
     user_order_to_id = {}
     user_id_to_order = {}
 
-    visualizer = Visualizer()
-
     def __init__(self, config: FeedbackMatrixConfig):
         self.config = config
+        self.num_of_users = User.num_of_users()
+        self.num_of_articles = Article.num_of_articles()
+        self.visualizer = Visualizer()
 
     def get_user_reading_sessions(self, show_data: List[ShowData] = ShowData.ALL):
         print("Getting all user reading sessions")
@@ -86,6 +84,10 @@ class FeedbackMatrix:
                 .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
         )
+        
+        return self.add_filters_for_query(query, show_data).all()
+
+    def add_filters_to_query(self, query, show_data: List[ShowData]):
         or_filters = []
         and_filters = []
         if ShowData.LIKED in show_data:
@@ -104,9 +106,10 @@ class FeedbackMatrix:
             query = query.filter(or_(*or_filters))
         if len(and_filters) > 0:
             query = query.filter(and_(*and_filters))
-        return query.all()
+        return query
 
     def get_sessions(self):
+        '''Gets all user reading sessions with respect to the given config'''
         print("Getting sessions")
         sessions: dict[Tuple[int, int], FeedbackMatrixSession] = {}
 
@@ -152,6 +155,7 @@ class FeedbackMatrix:
         return self.get_sessions_data(sessions)
     
     def get_sessions_data(self, sessions: dict[Tuple[int, int], FeedbackMatrixSession]):
+        '''Manipulate data for each session in the sessions dict, according to the parameters given in the config.'''
         liked_sessions = []
         feedback_diff_list = []
         have_read_sessions = 0
@@ -216,18 +220,26 @@ class FeedbackMatrix:
             self.user_id_to_order[user.id] = index
             index += 1
 
+    def sessions_to_order_sessions(self, sessions: list[FeedbackMatrixSession]):
+        '''Convert user and article ids of sessions to the order defined in our maps'''
+        liked_sessions = sessions
+        for i in range(len(liked_sessions)):
+            liked_sessions[i].user_id = self.user_id_to_order.get(liked_sessions[i].user_id)
+            liked_sessions[i].article_id = self.article_id_to_order.get(liked_sessions[i].article_id)
+        return liked_sessions
+
     def generate_dfs(self):
         self.set_article_order_to_id()
         self.set_user_order_to_id()
 
         sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
 
-        for i in range(len(liked_sessions)):
-            liked_sessions[i].user_id = self.user_id_to_order.get(liked_sessions[i].user_id)
-            liked_sessions[i].article_id = self.article_id_to_order.get(liked_sessions[i].article_id)
+        liked_sessions = self.sessions_to_order_sessions(liked_sessions)
 
         df = self.__session_map_to_df(sessions)
         liked_df = self.__session_list_to_df(liked_sessions)
+
+        # This df can be used for testing. It only contains two sessions (user-article pairs).
         #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
 
         self.sessions_df = df
@@ -251,9 +263,6 @@ class FeedbackMatrix:
         print("Building sparse tensor")
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
-
-        self.num_of_users = User.num_of_users()
-        self.num_of_articles = Article.num_of_articles()
 
         self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.num_of_users, self.num_of_articles)
 
