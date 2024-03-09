@@ -44,6 +44,7 @@ liked_sessions_df = matrix.liked_sessions_df
 num_users = matrix.num_of_users
 num_items = matrix.num_of_articles
 
+# This recommender is for testing. It only has 500 users and 500 items (Remember to use the hard-coded sessions in the feedback matrix as well)
 #recommender = RecommenderSystem(500, 500)
 #recommender = RecommenderSystem(num_users, num_items)
 
