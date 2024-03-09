@@ -27,12 +27,16 @@ print("Starting playground")
 sesh = db.session
 initial_candidate_pool()
 
+# Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
+test = True
+
 matrix_config = FeedbackMatrixConfig(
     show_data=[ShowData.RATED_DIFFICULTY],
     adjustment_config=AdjustmentConfig(
         difficulty_weight=1,
         translation_adjustment_value=4
     ),
+    test_tensor=test
 )
 
 matrix = FeedbackMatrix(matrix_config)
@@ -44,12 +48,13 @@ liked_sessions_df = matrix.liked_sessions_df
 num_users = matrix.num_of_users
 num_items = matrix.num_of_articles
 
-# This recommender is for testing. It only has 500 users and 500 items (Remember to use the hard-coded sessions in the feedback matrix as well)
-#recommender = RecommenderSystem(500, 500)
-#recommender = RecommenderSystem(num_users, num_items)
+if test:
+    recommender = RecommenderSystem(500, 500)
+else:
+    recommender = RecommenderSystem(num_users, num_items)
 
-#recommender.build_model(liked_sessions_df)
+recommender.build_model(liked_sessions_df)
 
-#recommender.cf_model.train()
+recommender.cf_model.train()
 
 print("Ending playground")

@@ -44,9 +44,10 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: List[ShowData], adjustment_config: AdjustmentConfig):
+    def __init__(self, show_data: List[ShowData], adjustment_config: AdjustmentConfig, test_tensor: bool):
         self.show_data = show_data
         self.adjustment_config = adjustment_config
+        self.test_tensor = test_tensor
 
 class FeedbackMatrix:
     default_difficulty_weight = 1
@@ -85,7 +86,7 @@ class FeedbackMatrix:
                 .order_by(UserReadingSession.user_id.asc())
         )
         
-        return self.add_filters_for_query(query, show_data).all()
+        return self.add_filters_to_query(query, show_data).all()
 
     def add_filters_to_query(self, query, show_data: List[ShowData]):
         or_filters = []
@@ -229,18 +230,17 @@ class FeedbackMatrix:
         return liked_sessions
 
     def generate_dfs(self):
-        self.set_article_order_to_id()
-        self.set_user_order_to_id()
-
         sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
 
-        liked_sessions = self.sessions_to_order_sessions(liked_sessions)
-
         df = self.__session_map_to_df(sessions)
-        liked_df = self.__session_list_to_df(liked_sessions)
+        if self.config.test_tensor:
+            liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+        else:
+            self.set_article_order_to_id()
+            self.set_user_order_to_id()
 
-        # This df can be used for testing. It only contains two sessions (user-article pairs).
-        #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+            liked_sessions = self.sessions_to_order_sessions(liked_sessions)
+            liked_df = self.__session_list_to_df(liked_sessions)
 
         self.sessions_df = df
         self.liked_sessions_df = liked_df

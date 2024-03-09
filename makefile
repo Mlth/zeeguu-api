@@ -38,7 +38,6 @@ run:
 	@docker-compose up dev_play
 	@docker-compose up dev_server
 
-
 play:
 	@echo "Running playground"
 	@docker-compose up dev_play
