@@ -40,7 +40,7 @@ matrix_config = FeedbackMatrixConfig(
 )
 
 matrix = FeedbackMatrix(matrix_config)
-matrix.build_sparse_tensor()
+matrix.generate_dfs()
 
 liked_sessions_df = matrix.liked_sessions_df
 
