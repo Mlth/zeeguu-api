@@ -44,8 +44,9 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: List[ShowData], adjustment_config: AdjustmentConfig, test_tensor: bool):
+    def __init__(self, show_data: List[ShowData], data_since: datetime, adjustment_config: AdjustmentConfig, test_tensor: bool):
         self.show_data = show_data
+        self.data_since = data_since
         self.adjustment_config = adjustment_config
         self.test_tensor = test_tensor
 
@@ -71,7 +72,7 @@ class FeedbackMatrix:
         self.num_of_articles = Article.num_of_articles()
         self.visualizer = Visualizer()
 
-    def get_user_reading_sessions(self, show_data: List[ShowData] = ShowData.ALL):
+    def get_user_reading_sessions(self, data_since: datetime, show_data: List[ShowData] = []):
         print("Getting all user reading sessions")
         query = (
             UserReadingSession.query
@@ -82,15 +83,15 @@ class FeedbackMatrix:
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
         )
+        if data_since:
+            query = query.filter(UserReadingSession.start_time >= data_since)
         
         return self.add_filters_to_query(query, show_data).all()
 
     def add_filters_to_query(self, query, show_data: List[ShowData]):
         or_filters = []
-        and_filters = []
         if ShowData.LIKED in show_data:
             query = (
                 query.join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id), isouter=True)
@@ -101,12 +102,8 @@ class FeedbackMatrix:
                 query.join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id), isouter=True)
             )
             or_filters.append(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
-        if ShowData.NEW_DATA in show_data:
-            and_filters.append(UserReadingSession.start_time >= datetime(day=30, month=1, year=2024))
         if len(or_filters) > 0:
             query = query.filter(or_(*or_filters))
-        if len(and_filters) > 0:
-            query = query.filter(and_(*and_filters))
         return query
 
     def get_sessions(self):
@@ -115,7 +112,7 @@ class FeedbackMatrix:
         sessions: dict[Tuple[int, int], FeedbackMatrixSession] = {}
 
         query_data = None
-        query_data = self.get_user_reading_sessions(self.config.show_data)
+        query_data = self.get_user_reading_sessions(self.config.data_since, self.config.show_data)
 
         for session in query_data:
             article_id = session.article_id
@@ -268,7 +265,7 @@ class FeedbackMatrix:
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")
-        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name, self.config.show_data)
+        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name, self.config.show_data, self.config.data_since)
 
     def visualize_tensor(self, file_name='tensor'):
         print("Visualizing tensor")

@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from enum import Enum, auto
 
@@ -6,11 +7,12 @@ average_reading_speed = 70
 upper_bound_reading_speed = 45
 lower_bound_reading_speed = -35
 
+accurate_duration_date = datetime(day=30, month=1, year=2024)
+
 class ShowData(Enum):
-    ALL = auto()
+    # If no ShowData is chosen, all data will be retrieved and shown.
     LIKED = auto()
     RATED_DIFFICULTY = auto()
-    NEW_DATA = auto()
 
 def get_expected_reading_time(word_count, offset):
     # The higher the offset is, the higher we want the WPM to be. When WPM is larger, the user is expected to be able to read faster.

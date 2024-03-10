@@ -23,19 +23,30 @@ class Visualizer:
             legend.append(plt.Line2D([0], [0], marker='', label=f"Expected read: {have_read_ratio:.2f}% ({have_read_sessions} sessions)"))
             legend.append(plt.Line2D([0], [0], marker='', label=f"Expected not read: {have_not_read_ratio:.2f}% ({sessions_count - have_read_sessions} sessions)"))
 
-        for data in show_data:
-            if data == ShowData.LIKED or data == ShowData.ALL:
-                legend.append(plt.Line2D([0], [0], marker='o', color='g', label='green = liked'))
-            if data == ShowData.RATED_DIFFICULTY or data == ShowData.ALL:
-                legend.append(plt.Line2D([0], [0], marker='o', color='y', label='yellow = easy'))
-                legend.append(plt.Line2D([0], [0], marker='o', color='b', label='blue = ok'))
-                legend.append(plt.Line2D([0], [0], marker='o', color='k', label='black = difficult'))
-
-        legend.append(plt.Line2D([0], [0], marker='o', color='r', label='red = no feedback'))
-
+        if len(show_data) == 0:
+            self.add_entire_legend(legend)
+        else:
+            for data in show_data:
+                if data == ShowData.LIKED:
+                    self.add_like_legend(legend)
+                if data == ShowData.RATED_DIFFICULTY:
+                    self.add_difficulty_legend(legend)
         plt.legend(handles=legend)
 
-    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, show_data: List[ShowData]):
+    def add_entire_legend(self, legend):
+        self.add_like_legend(legend)
+        self.add_difficulty_legend(legend)
+        legend.append(plt.Line2D([0], [0], marker='o', color='r', label='red = no feedback'))
+
+    def add_like_legend(self, legend):
+        legend.append(plt.Line2D([0], [0], marker='o', color='g', label='green = liked'))
+
+    def add_difficulty_legend(self, legend):
+        legend.append(plt.Line2D([0], [0], marker='o', color='y', label='yellow = easy'))
+        legend.append(plt.Line2D([0], [0], marker='o', color='b', label='blue = ok'))
+        legend.append(plt.Line2D([0], [0], marker='o', color='k', label='black = difficult'))
+
+    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, show_data: List[ShowData], data_since):
         plt.clf()
         if len(df) == 0:
             print("No data to plot")
@@ -66,6 +77,11 @@ class Visualizer:
         plt.rc('axes', axisbelow=True)
 
         self.add_legend(show_data, have_read_sessions, len(df))
+
+        title_string = "User reading sessions"
+        if data_since:
+            title_string += f" (since {data_since.strftime('%Y-%m-%d')})"
+        plt.title(title_string)
 
         #Change to '.svg' and format to 'svg' for svg.
         plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
