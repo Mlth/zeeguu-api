@@ -44,9 +44,11 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: List[ShowData], adjustment_config: AdjustmentConfig):
+    def __init__(self, show_data: List[ShowData], data_since: datetime, adjustment_config: AdjustmentConfig, test_tensor: bool):
         self.show_data = show_data
+        self.data_since = data_since
         self.adjustment_config = adjustment_config
+        self.test_tensor = test_tensor
 
 class FeedbackMatrix:
     default_difficulty_weight = 1
@@ -59,20 +61,18 @@ class FeedbackMatrix:
     feedback_diff_list_toprint = None
     feedback_counter = 0
 
-    num_of_users = None
-    num_of_articles = None
-
     article_order_to_id = {}
     article_id_to_order = {}
     user_order_to_id = {}
     user_id_to_order = {}
 
-    visualizer = Visualizer()
-
     def __init__(self, config: FeedbackMatrixConfig):
         self.config = config
+        self.num_of_users = User.num_of_users()
+        self.num_of_articles = Article.num_of_articles()
+        self.visualizer = Visualizer()
 
-    def get_user_reading_sessions(self, show_data: List[ShowData] = ShowData.ALL):
+    def get_user_reading_sessions(self, data_since: datetime, show_data: List[ShowData] = []):
         print("Getting all user reading sessions")
         query = (
             UserReadingSession.query
@@ -83,11 +83,15 @@ class FeedbackMatrix:
                 .filter(UserReadingSession.article_id.isnot(None))
                 .filter(UserReadingSession.duration >= 30000) # 30 seconds
                 .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                .filter(UserReadingSession.start_time >= datetime.now() - timedelta(days=365)) # 1 year
                 .order_by(UserReadingSession.user_id.asc())
         )
+        if data_since:
+            query = query.filter(UserReadingSession.start_time >= data_since)
+        
+        return self.add_filters_to_query(query, show_data).all()
+
+    def add_filters_to_query(self, query, show_data: List[ShowData]):
         or_filters = []
-        and_filters = []
         if ShowData.LIKED in show_data:
             query = (
                 query.join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id), isouter=True)
@@ -98,20 +102,17 @@ class FeedbackMatrix:
                 query.join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id), isouter=True)
             )
             or_filters.append(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
-        if ShowData.NEW_DATA in show_data:
-            and_filters.append(UserReadingSession.start_time >= datetime(day=30, month=1, year=2024))
         if len(or_filters) > 0:
             query = query.filter(or_(*or_filters))
-        if len(and_filters) > 0:
-            query = query.filter(and_(*and_filters))
-        return query.all()
+        return query
 
     def get_sessions(self):
+        '''Gets all user reading sessions with respect to the given config'''
         print("Getting sessions")
         sessions: dict[Tuple[int, int], FeedbackMatrixSession] = {}
 
         query_data = None
-        query_data = self.get_user_reading_sessions(self.config.show_data)
+        query_data = self.get_user_reading_sessions(self.config.data_since, self.config.show_data)
 
         for session in query_data:
             article_id = session.article_id
@@ -152,6 +153,7 @@ class FeedbackMatrix:
         return self.get_sessions_data(sessions)
     
     def get_sessions_data(self, sessions: dict[Tuple[int, int], FeedbackMatrixSession]):
+        '''Manipulate data for each session in the sessions dict, according to the parameters given in the config.'''
         liked_sessions = []
         feedback_diff_list = []
         have_read_sessions = 0
@@ -216,19 +218,26 @@ class FeedbackMatrix:
             self.user_id_to_order[user.id] = index
             index += 1
 
-    def generate_dfs(self):
-        self.set_article_order_to_id()
-        self.set_user_order_to_id()
-
-        sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
-
+    def sessions_to_order_sessions(self, sessions: list[FeedbackMatrixSession]):
+        '''Convert user and article ids of sessions to the order defined in our maps'''
+        liked_sessions = sessions
         for i in range(len(liked_sessions)):
             liked_sessions[i].user_id = self.user_id_to_order.get(liked_sessions[i].user_id)
             liked_sessions[i].article_id = self.article_id_to_order.get(liked_sessions[i].article_id)
+        return liked_sessions
+
+    def generate_dfs(self):
+        sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
 
         df = self.__session_map_to_df(sessions)
-        liked_df = self.__session_list_to_df(liked_sessions)
-        #liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(505, 510, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+        if self.config.test_tensor:
+            liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+        else:
+            self.set_article_order_to_id()
+            self.set_user_order_to_id()
+
+            liked_sessions = self.sessions_to_order_sessions(liked_sessions)
+            liked_df = self.__session_list_to_df(liked_sessions)
 
         self.sessions_df = df
         self.liked_sessions_df = liked_df
@@ -252,14 +261,11 @@ class FeedbackMatrix:
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
 
-        self.num_of_users = User.num_of_users()
-        self.num_of_articles = Article.num_of_articles()
-
         self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.num_of_users, self.num_of_articles)
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")
-        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name, self.config.show_data)
+        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name, self.config.show_data, self.config.data_since)
 
     def visualize_tensor(self, file_name='tensor'):
         print("Visualizing tensor")

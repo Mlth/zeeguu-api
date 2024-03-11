@@ -11,6 +11,8 @@ from zeeguu.core.candidate_pool_generator.candidate_generator import build_candi
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig, ShowData
 from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
 from zeeguu.core.elastic.indexing import index_all_articles
+from datetime import datetime, timedelta
+from zeeguu.recommender.utils import accurate_duration_date
 
 import tensorflow as tf
 from zeeguu.recommender.recommender_system import RecommenderSystem
@@ -27,27 +29,40 @@ print("Starting playground")
 sesh = db.session
 initial_candidate_pool()
 
-matrix_config = FeedbackMatrixConfig(
-    show_data=[ShowData.RATED_DIFFICULTY],
-    adjustment_config=AdjustmentConfig(
-        difficulty_weight=1,
-        translation_adjustment_value=4
-    ),
-)
-matrix = FeedbackMatrix(matrix_config)
-matrix.build_sparse_tensor()
+# Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
+test = True
 
+for i in range(5):
+    matrix_config = FeedbackMatrixConfig(
+        show_data=[],
+        data_since=accurate_duration_date,
+        adjustment_config=AdjustmentConfig(
+            difficulty_weight=i,
+            translation_adjustment_value=1
+        ),
+        test_tensor=test
+    )
+
+    matrix = FeedbackMatrix(matrix_config)
+    matrix.generate_dfs()
+
+    matrix.plot_sessions_df("difficulty-parameter:{}".format(i))
+
+'''
 liked_sessions_df = matrix.liked_sessions_df
 
 # Define embedding layers for users and items
 num_users = matrix.num_of_users
 num_items = matrix.num_of_articles
 
-#recommender = RecommenderSystem(500, 500)
-#recommender = RecommenderSystem(num_users, num_items)
+if test:
+    recommender = RecommenderSystem(500, 500)
+else:
+    recommender = RecommenderSystem(num_users, num_items)
 
-#recommender.build_model(liked_sessions_df)
+recommender.build_model(liked_sessions_df)
 
-#recommender.cf_model.train()
+recommender.cf_model.train()
+'''
 
 print("Ending playground")
