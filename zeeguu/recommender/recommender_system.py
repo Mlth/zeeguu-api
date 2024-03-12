@@ -33,22 +33,23 @@ class RecommenderSystem:
         return train, test
 
     def sparse_mean_square_error(self, sparse_sessions, user_embeddings, article_embeddings):
-        """
-        Args:
-            sparse_sessions: A SparseTensor rating matrix, of dense_shape [N, M]
-            user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
-            dimension, such that U_i is the embedding of user i.
-            article_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
-            dimension, such that V_j is the embedding of movie j.
-        Returns:
-            A scalar Tensor representing the MSE between the true ratings and the
-            model's predictions.
-        """
-        predictions = tf.gather_nd(
-            tf.matmul(user_embeddings, article_embeddings, transpose_b=True),
-            sparse_sessions.indices)
-        loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
-        return loss
+      """
+      Args:
+        sparse_ratings: A SparseTensor rating matrix, of dense_shape [N, M]
+        user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
+          dimension, such that U_i is the embedding of user i.
+        movie_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
+          dimension, such that V_j is the embedding of movie j.
+      Returns:
+        A scalar Tensor representing the MSE between the true ratings and the
+          model's predictions.
+      """
+      predictions = tf.reduce_sum(
+          tf.gather(user_embeddings, sparse_sessions.indices[:, 0]) *
+          tf.gather(article_embeddings, sparse_sessions.indices[:, 1]),
+          axis=1)
+      loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
+      return loss
     
     def build_model(self, liked_sessions_df):
         """

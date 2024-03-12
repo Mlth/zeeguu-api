@@ -30,8 +30,9 @@ sesh = db.session
 initial_candidate_pool()
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
-test = True
+test = False
 
+'''
 for i in range(5):
     matrix_config = FeedbackMatrixConfig(
         show_data=[],
@@ -47,10 +48,22 @@ for i in range(5):
     matrix.generate_dfs()
 
     matrix.plot_sessions_df("difficulty-parameter:{}".format(i))
-
 '''
-liked_sessions_df = matrix.liked_sessions_df
 
+print("setting up config")
+matrix_config = FeedbackMatrixConfig(
+        show_data=[],
+        data_since=accurate_duration_date,
+        adjustment_config=AdjustmentConfig(
+            difficulty_weight=5,
+            translation_adjustment_value=1
+        ),
+        test_tensor=test
+    )
+matrix = FeedbackMatrix(matrix_config)
+matrix.generate_dfs()
+liked_sessions_df = matrix.liked_sessions_df
+print("here")
 # Define embedding layers for users and items
 num_users = matrix.num_of_users
 num_items = matrix.num_of_articles
@@ -60,9 +73,12 @@ if test:
 else:
     recommender = RecommenderSystem(num_users, num_items)
 
+
+print(liked_sessions_df)
+
 recommender.build_model(liked_sessions_df)
 
 recommender.cf_model.train()
-'''
+
 
 print("Ending playground")
