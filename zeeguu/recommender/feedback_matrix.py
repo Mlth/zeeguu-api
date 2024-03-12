@@ -61,16 +61,21 @@ class FeedbackMatrix:
     feedback_diff_list_toprint = None
     feedback_counter = 0
 
-    article_order_to_id = {}
-    article_id_to_order = {}
-    user_order_to_id = {}
-    user_id_to_order = {}
+
+    #article_order_to_id = {}
+    #article_id_to_order = {}
+    #user_order_to_id = {}
+    #user_id_to_order = {}
 
     def __init__(self, config: FeedbackMatrixConfig):
         self.config = config
         self.num_of_users = User.num_of_users()
         self.num_of_articles = Article.num_of_articles()
         self.visualizer = Visualizer()
+        self.max_article_id = Article.query.filter(Article.broken == 0).order_by(Article.id.desc()).first().id
+        self.max_user_id = User.query.filter(User.is_dev == False).order_by(User.id.desc()).first().id
+
+
 
     def get_user_reading_sessions(self, data_since: datetime, show_data: List[ShowData] = []):
         print("Getting all user reading sessions")
@@ -204,6 +209,8 @@ class FeedbackMatrix:
 
     def set_article_order_to_id(self):
         articles = Article.query.filter(Article.broken == 0).all()
+        max_article_id = Article.query.filter(Article.broken == 0).order_by(Article.id.desc()).first().id
+        print("max article ID is %s", max_article_id)
         index = 0
         for article in articles:
             self.article_order_to_id[index] = article.id
@@ -212,6 +219,7 @@ class FeedbackMatrix:
 
     def set_user_order_to_id(self):
         users = User.query.filter(User.is_dev == False).all()
+        print("max user ID is %s", max_user_id)
         index = 0
         for user in users:
             self.user_order_to_id[index] = user.id
@@ -233,10 +241,10 @@ class FeedbackMatrix:
         if self.config.test_tensor:
             liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
         else:
-            self.set_article_order_to_id()
-            self.set_user_order_to_id()
+            #self.set_article_order_to_id()
+            #self.set_user_order_to_id()
 
-            liked_sessions = self.sessions_to_order_sessions(liked_sessions)
+            #liked_sessions = self.sessions_to_order_sessions(liked_sessions)
             liked_df = self.__session_list_to_df(liked_sessions)
 
         self.sessions_df = df
@@ -261,7 +269,7 @@ class FeedbackMatrix:
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
 
-        self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.num_of_users, self.num_of_articles)
+        self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.max_user_id, self.max_article_id)
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")
