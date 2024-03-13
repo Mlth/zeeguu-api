@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from zeeguu.core.model import db
 from collections import Counter
-from zeeguu.recommender.visualizer import Visualizer
+from zeeguu.recommender.visualization.session_visualizer import SessionVisualizer
 from zeeguu.core.model import db
 from sqlalchemy import or_, and_
 
@@ -70,7 +70,7 @@ class FeedbackMatrix:
         self.config = config
         self.num_of_users = User.num_of_users()
         self.num_of_articles = Article.num_of_articles()
-        self.visualizer = Visualizer()
+        self.visualizer = SessionVisualizer()
 
     def get_user_reading_sessions(self, data_since: datetime, show_data: List[ShowData] = []):
         print("Getting all user reading sessions")
@@ -231,7 +231,7 @@ class FeedbackMatrix:
 
         df = self.__session_map_to_df(sessions)
         if self.config.test_tensor:
-            liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+            liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(1, 5, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
         else:
             self.set_article_order_to_id()
             self.set_user_order_to_id()

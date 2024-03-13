@@ -32,37 +32,32 @@ initial_candidate_pool()
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
 test = True
 
-for i in range(5):
-    matrix_config = FeedbackMatrixConfig(
-        show_data=[],
-        data_since=accurate_duration_date,
-        adjustment_config=AdjustmentConfig(
-            difficulty_weight=i,
-            translation_adjustment_value=1
-        ),
-        test_tensor=test
-    )
+matrix_config = FeedbackMatrixConfig(
+    show_data=[],
+    data_since=accurate_duration_date,
+    adjustment_config=AdjustmentConfig(
+        difficulty_weight=2,
+        translation_adjustment_value=1
+    ),
+    test_tensor=test
+)
 
-    matrix = FeedbackMatrix(matrix_config)
-    matrix.generate_dfs()
+matrix = FeedbackMatrix(matrix_config)
+matrix.generate_dfs()
 
-    matrix.plot_sessions_df("difficulty-parameter:{}".format(i))
-
-'''
-liked_sessions_df = matrix.liked_sessions_df
-
-# Define embedding layers for users and items
-num_users = matrix.num_of_users
-num_items = matrix.num_of_articles
+sessions_df = matrix.liked_sessions_df
 
 if test:
-    recommender = RecommenderSystem(500, 500)
+    recommender = RecommenderSystem(sessions_df, 500, 500)
 else:
-    recommender = RecommenderSystem(num_users, num_items)
+    recommender = RecommenderSystem(sessions_df, matrix.num_of_users, matrix.num_of_articles)
 
-recommender.build_model(liked_sessions_df)
+recommender.build_model()
 
 recommender.cf_model.train()
-'''
+
+recommender.user_recommendations(2)
+
+recommender.visualize_article_embeddings()
 
 print("Ending playground")
