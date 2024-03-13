@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 from enum import Enum, auto
 
-resource_path = script_dir = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
+resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
 upper_bound_reading_speed = 45
 lower_bound_reading_speed = -35
@@ -13,6 +13,12 @@ class ShowData(Enum):
     # If no ShowData is chosen, all data will be retrieved and shown.
     LIKED = auto()
     RATED_DIFFICULTY = auto()
+
+def get_resource_path():
+    if not os.path.exists(resource_path):
+        os.makedirs(resource_path)
+        print(f"Folder '{resource_path}' created successfully.")
+    return resource_path
 
 def get_expected_reading_time(word_count, offset):
     # The higher the offset is, the higher we want the WPM to be. When WPM is larger, the user is expected to be able to read faster.
@@ -33,6 +39,7 @@ def cefr_to_fk_difficulty(number):
     elif 81 <= number <= 100:
         result = 5
 
+    # This implementation matches the information that Oscar found online. This gives some weird results because a lot of articles are above 50.
     '''if 0 <= number <= 10:
         result = 1
     elif 11 <= number <= 20:
