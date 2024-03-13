@@ -22,6 +22,19 @@ tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 
+pd.options.display.max_rows = 10
+pd.options.display.float_format = '{:.3f}'.format
+def mask(df, key, function):
+  """Returns a filtered dataframe, by applying function to key"""
+  return df[function(df[key])]
+
+def flatten_cols(df):
+  df.columns = [' '.join(col).strip() for col in df.columns.values]
+  return df
+
+pd.DataFrame.mask = mask
+pd.DataFrame.flatten_cols = flatten_cols
+
 app = create_app()
 app.app_context().push()
 
@@ -30,8 +43,9 @@ sesh = db.session
 initial_candidate_pool()
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
-test = True
+test = False
 
+'''
 for i in range(5):
     matrix_config = FeedbackMatrixConfig(
         show_data=[],
@@ -47,22 +61,45 @@ for i in range(5):
     matrix.generate_dfs()
 
     matrix.plot_sessions_df("difficulty-parameter:{}".format(i))
-
 '''
+
+print("setting up config")
+
+#articles = Article.query.filter(Article.broken == 0).all()
+#users = User.query.filter(User.is_dev == False).all()
+
+#print(articles[0])
+#print(users[0])
+start_time = time.time()
+matrix_config = FeedbackMatrixConfig(
+        show_data=[],
+        data_since=accurate_duration_date,
+        adjustment_config=AdjustmentConfig(
+            difficulty_weight=5,
+            translation_adjustment_value=1
+        ),
+        test_tensor=test
+    )
+matrix = FeedbackMatrix(matrix_config)
+matrix.generate_dfs()
 liked_sessions_df = matrix.liked_sessions_df
 
+print("here")
 # Define embedding layers for users and items
-num_users = matrix.num_of_users
-num_items = matrix.num_of_articles
+num_users = matrix.max_user_id
+num_items = matrix.max_article_id
 
 if test:
     recommender = RecommenderSystem(500, 500)
 else:
     recommender = RecommenderSystem(num_users, num_items)
 
+print(liked_sessions_df)
+
 recommender.build_model(liked_sessions_df)
 
 recommender.cf_model.train()
-'''
+print("--- %s seconds ---" % (time.time() - start_time))
+
 
 print("Ending playground")
