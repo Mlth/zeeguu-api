@@ -22,6 +22,19 @@ tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 
+pd.options.display.max_rows = 10
+pd.options.display.float_format = '{:.3f}'.format
+def mask(df, key, function):
+  """Returns a filtered dataframe, by applying function to key"""
+  return df[function(df[key])]
+
+def flatten_cols(df):
+  df.columns = [' '.join(col).strip() for col in df.columns.values]
+  return df
+
+pd.DataFrame.mask = mask
+pd.DataFrame.flatten_cols = flatten_cols
+
 app = create_app()
 app.app_context().push()
 
@@ -30,7 +43,7 @@ sesh = db.session
 initial_candidate_pool()
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
-test = True
+test = False
 
 matrix_config = FeedbackMatrixConfig(
     show_data=[],
@@ -50,14 +63,19 @@ sessions_df = matrix.liked_sessions_df
 if test:
     recommender = RecommenderSystem(sessions_df, 500, 500)
 else:
-    recommender = RecommenderSystem(sessions_df, matrix.num_of_users, matrix.num_of_articles)
+    recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
+
+start_time = time.time()
 
 recommender.build_model()
 
 recommender.cf_model.train()
 
-recommender.user_recommendations(2)
+recommender.user_recommendations(4338)
 
-recommender.visualize_article_embeddings()
+#recommender.visualize_article_embeddings()
+
+print("--- %s seconds ---" % (time.time() - start_time))
+
 
 print("Ending playground")

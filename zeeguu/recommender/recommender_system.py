@@ -33,8 +33,10 @@ class RecommenderSystem:
         self.embedding_dim = embedding_dim
         self.stddev = stddev
 
-        #TODO: HARDCODED - Change to articles from embedding
-        self.articles = pd.read_sql_query("Select * from article limit 500", db.engine)
+        #TODO: This fills out the sparse spaces between articles. Should be rethought and refactored when we know exactly how to handle the sparse ids of articles.
+        self.articles = pd.read_sql_query("Select id, title from article", db.engine)
+        all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
+        self.articles = pd.merge(all_null_df, self.articles, on='id', how='left')
 
     def split_dataframe(self, df: DataFrame, holdout_fraction=0.1):
         """Splits a DataFrame into training and test sets.
@@ -50,22 +52,23 @@ class RecommenderSystem:
         return train, test
 
     def sparse_mean_square_error(self, sparse_sessions, user_embeddings, article_embeddings):
-        """
-        Args:
-            sparse_sessions: A SparseTensor rating matrix, of dense_shape [N, M]
-            user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
-            dimension, such that U_i is the embedding of user i.
-            article_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
-            dimension, such that V_j is the embedding of movie j.
-        Returns:
-            A scalar Tensor representing the MSE between the true ratings and the
-            model's predictions.
-        """
-        predictions = tf.gather_nd(
-            tf.matmul(user_embeddings, article_embeddings, transpose_b=True),
-            sparse_sessions.indices)
-        loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
-        return loss
+      """
+      Args:
+        sparse_ratings: A SparseTensor rating matrix, of dense_shape [N, M]
+        user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
+          dimension, such that U_i is the embedding of user i.
+        movie_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
+          dimension, such that V_j is the embedding of movie j.
+      Returns:
+        A scalar Tensor representing the MSE between the true ratings and the
+          model's predictions.
+      """
+      predictions = tf.reduce_sum(
+          tf.gather(user_embeddings, sparse_sessions.indices[:, 0]) *
+          tf.gather(article_embeddings, sparse_sessions.indices[:, 1]),
+          axis=1)
+      loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
+      return loss
     
     def build_model(self):
         """
@@ -130,14 +133,13 @@ class RecommenderSystem:
             score_key = str(measure) + ' score'
             df = pd.DataFrame({
                 score_key: list(scores),
-                'article_id': [i for i in range(self.num_items)], # Should be changed to have the same article ids as in the embedding that we have currently looked at.
+                'article_id': self.articles['id'],
                 'titles': self.articles['title'],
             })
             if exclude_rated:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values
                 df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
-            print("displaying")
             display.display(df.sort_values([score_key], ascending=False).head(k))
         else:
             # Possibly do elastic stuff to just give some random recommendations
