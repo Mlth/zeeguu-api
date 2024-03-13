@@ -73,7 +73,7 @@ print("setting up config")
 start_time = time.time()
 matrix_config = FeedbackMatrixConfig(
         show_data=[],
-        data_since=accurate_duration_date,
+        #data_since=accurate_duration_date,
         adjustment_config=AdjustmentConfig(
             difficulty_weight=5,
             translation_adjustment_value=1
