@@ -65,11 +65,6 @@ for i in range(5):
 
 print("setting up config")
 
-#articles = Article.query.filter(Article.broken == 0).all()
-#users = User.query.filter(User.is_dev == False).all()
-
-#print(articles[0])
-#print(users[0])
 start_time = time.time()
 matrix_config = FeedbackMatrixConfig(
         show_data=[],

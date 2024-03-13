@@ -1,13 +1,10 @@
-from typing import Tuple, List
 from zeeguu.core.model.article import Article
 from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
 from zeeguu.core.model.user import User
 from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
-from zeeguu.core.model.user_language import UserLanguage
-from zeeguu.core.model.user_reading_session import UserReadingSession
 from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils import cefr_to_fk_difficulty, get_diff_in_article_and_user_level, get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData
+from zeeguu.recommender.utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions
 from datetime import datetime
 import pandas as pd
 from collections import Counter
@@ -44,7 +41,7 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: List[ShowData], adjustment_config: AdjustmentConfig, test_tensor: bool = False, data_since: datetime = None):
+    def __init__(self, show_data: list[ShowData], adjustment_config: AdjustmentConfig, test_tensor: bool = False, data_since: datetime = None):
         self.show_data = show_data
         self.data_since = data_since
         self.adjustment_config = adjustment_config
@@ -69,48 +66,11 @@ class FeedbackMatrix:
         self.max_article_id = Article.query.filter(Article.broken == 0).order_by(Article.id.desc()).first().id
         self.max_user_id = User.query.filter(User.is_dev == False).order_by(User.id.desc()).first().id
 
-
-    def get_user_reading_sessions(self, data_since: datetime, show_data: List[ShowData] = []):
-        print("Getting all user reading sessions")
-        query = (
-            UserReadingSession.query
-                .join(User, User.id == UserReadingSession.user_id)
-                .join(Article, Article.id == UserReadingSession.article_id)
-                .filter(Article.broken == 0)
-                .filter(User.is_dev == False)
-                .filter(UserReadingSession.article_id.isnot(None))
-                .filter(UserReadingSession.duration >= 30000) # 30 seconds
-                .filter(UserReadingSession.duration <= 3600000) # 1 hour
-                .order_by(UserReadingSession.user_id.asc())
-        )
-        if data_since:
-            query = query.filter(UserReadingSession.start_time >= data_since)
-        
-        return self.add_filters_to_query(query, show_data).all()
-
-    def add_filters_to_query(self, query, show_data: List[ShowData]):
-        or_filters = []
-        if ShowData.LIKED in show_data:
-            query = (
-                query.join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id), isouter=True)
-            )
-            or_filters.append(UserArticle.liked == True)
-        if ShowData.RATED_DIFFICULTY in show_data:
-            query = (
-                query.join(ArticleDifficultyFeedback, (ArticleDifficultyFeedback.article_id == UserReadingSession.article_id) & (ArticleDifficultyFeedback.user_id == UserReadingSession.user_id), isouter=True)
-            )
-            or_filters.append(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
-        if len(or_filters) > 0:
-            query = query.filter(or_(*or_filters))
-        return query
-
     def get_sessions(self):
         '''Gets all user reading sessions with respect to the given config'''
         print("Getting sessions")
-        sessions: dict[Tuple[int, int], FeedbackMatrixSession] = {}
-
-        query_data = None
-        query_data = self.get_user_reading_sessions(self.config.data_since, self.config.show_data)
+        sessions: dict[tuple[int, int], FeedbackMatrixSession] = {}
+        query_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
 
         for session in query_data:
             article_id = session.article_id
@@ -138,6 +98,7 @@ class FeedbackMatrix:
 
         return self.get_sessions_data(sessions)
 
+
     def create_feedback_matrix_session(self, session, article, session_duration, liked_value, difficulty_feedback_value, article_topic_list):
         return FeedbackMatrixSession(
             session.user_id,
@@ -153,7 +114,7 @@ class FeedbackMatrix:
             (datetime.now() - session.start_time).days,
         )
     
-    def get_sessions_data(self, sessions: dict[Tuple[int, int], FeedbackMatrixSession]):
+    def get_sessions_data(self, sessions: dict[tuple[int, int], FeedbackMatrixSession]):
         '''Manipulate data for each session in the sessions dict, according to the parameters given in the config.'''
         liked_sessions = []
         feedback_diff_list = []
@@ -164,7 +125,7 @@ class FeedbackMatrix:
 
         for session in sessions.keys():
             sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
-            sessions[session].session_duration = self.get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight)
+            sessions[session].session_duration = get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight)
 
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
@@ -179,48 +140,12 @@ class FeedbackMatrix:
         
         return sessions, liked_sessions, have_read_sessions, feedback_diff_list
 
-    def get_difficulty_adjustment(self, session: FeedbackMatrixSession, weight):
-        user_level_query = (
-            UserLanguage.query
-                .filter_by(user_id = session.user_id, language_id=session.language_id)
-                .filter(UserLanguage.cefr_level.isnot(None))
-                .with_entities(UserLanguage.cefr_level)
-                .first()
-        )
-        
-        if user_level_query is None or user_level_query[0] == 0 or user_level_query[0] is None or user_level_query[0] == [] or user_level_query == []:
-            return session.session_duration
-        user_level = user_level_query[0]
-
-        difficulty = session.difficulty
-        fk_difficulty = cefr_to_fk_difficulty(difficulty)
-        return session.session_duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
-
     def get_translation_adjustment(self, session: FeedbackMatrixSession, adjustment_value):
         timesTranslated = UserActivityData.translated_words_for_article(session.user_id, session.article_id)
         return session.session_duration - (timesTranslated * adjustment_value)
 
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
-
-    def set_article_order_to_id(self):
-        articles = Article.query.filter(Article.broken == 0).all()
-        max_article_id = Article.query.filter(Article.broken == 0).order_by(Article.id.desc()).first().id
-        print("max article ID is %s", max_article_id)
-        index = 0
-        for article in articles:
-            self.article_order_to_id[index] = article.id
-            self.article_id_to_order[article.id] = index
-            index += 1
-
-    def set_user_order_to_id(self):
-        users = User.query.filter(User.is_dev == False).all()
-        print("max user ID is %s", max_user_id)
-        index = 0
-        for user in users:
-            self.user_order_to_id[index] = user.id
-            self.user_id_to_order[user.id] = index
-            index += 1
 
     def sessions_to_order_sessions(self, sessions: list[FeedbackMatrixSession]):
         '''Convert user and article ids of sessions to the order defined in our maps'''
@@ -244,7 +169,7 @@ class FeedbackMatrix:
         self.have_read_sessions = have_read_sessions
         self.feedback_diff_list_toprint = feedback_diff_list
 
-    def __session_map_to_df(self, sessions: dict[Tuple[int, int], FeedbackMatrixSession]):
+    def __session_map_to_df(self, sessions: dict[tuple[int, int], FeedbackMatrixSession]):
         data = {index: vars(session) for index, session in sessions.items()}
         df = pd.DataFrame.from_dict(data, orient='index')
         return df
