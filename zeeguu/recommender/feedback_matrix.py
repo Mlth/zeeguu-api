@@ -8,8 +8,9 @@ from zeeguu.recommender.utils import get_expected_reading_time, lower_bound_read
 from datetime import datetime
 import pandas as pd
 from collections import Counter
-from zeeguu.recommender.visualizer import Visualizer
-from sqlalchemy import or_
+from zeeguu.recommender.visualization.session_visualizer import SessionVisualizer
+from zeeguu.core.model import db
+from sqlalchemy import or_, and_
 
 import tensorflow as tf
 tf = tf.compat.v1
@@ -62,7 +63,7 @@ class FeedbackMatrix:
         self.config = config
         self.num_of_users = User.num_of_users()
         self.num_of_articles = Article.num_of_articles()
-        self.visualizer = Visualizer()
+        self.visualizer = SessionVisualizer()
         self.max_article_id = Article.query.filter(Article.broken == 0).order_by(Article.id.desc()).first().id
         self.max_user_id = User.query.filter(User.is_dev == False).order_by(User.id.desc()).first().id
 
@@ -160,7 +161,7 @@ class FeedbackMatrix:
 
         df = self.__session_map_to_df(sessions)
         if self.config.test_tensor:
-            liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+            liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(1, 5, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
         else:
             liked_df = self.__session_list_to_df(liked_sessions)
 
