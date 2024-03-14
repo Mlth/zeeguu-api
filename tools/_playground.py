@@ -45,6 +45,8 @@ initial_candidate_pool()
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
 test = False
 
+start_time = time.time()
+
 matrix_config = FeedbackMatrixConfig(
     show_data=[],
     data_since=accurate_duration_date,
