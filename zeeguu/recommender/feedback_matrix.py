@@ -79,13 +79,13 @@ class FeedbackMatrix:
             article = Article.find_by_id(article_id)
             session_duration = int(session.duration) / 1000 # in seconds
             liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
-            liked_value = 0 if liked == (False,) or liked is None else 1 # should check out
+            if liked == (False,) or liked is None:
+                liked_value = 0 
+            else: liked_value = 1
             difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
             difficulty_feedback_value = 0 if difficulty_feedback is None else int(difficulty_feedback[0])
-            
             if difficulty_feedback_value != 0:
                 self.feedback_counter += 1
-
             article_topic = article.topics
             article_topic_list = []
             if len(article_topic) > 0:

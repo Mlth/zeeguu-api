@@ -36,6 +36,7 @@ class RecommenderSystem:
         #TODO: This fills out the sparse spaces between articles. Should be rethought and refactored when we know exactly how to handle the sparse ids of articles.
         self.articles = pd.read_sql_query("Select id, title from article", db.engine)
         all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
+        all_null_df.fillna(0, inplace=True)
         self.articles = pd.merge(all_null_df, self.articles, on='id', how='left')
 
     def split_dataframe(self, df: DataFrame, holdout_fraction=0.1):
@@ -135,7 +136,7 @@ class RecommenderSystem:
                 score_key: list(scores),
                 'article_id': self.articles['id'],
                 'titles': self.articles['title'],
-            })
+            }).dropna(subset=["titles"])
             if exclude_rated:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values
