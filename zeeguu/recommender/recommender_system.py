@@ -4,11 +4,11 @@ from pandas import DataFrame
 from zeeguu.core.model.article import Article
 from zeeguu.recommender.cf_model import CFModel
 from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils import ShowData
+from zeeguu.recommender.utils import ShowData, setup_df_rs
 import pandas as pd
 from IPython import display
 from zeeguu.recommender.utils import get_resource_path
-from zeeguu.core.model import db
+from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor, genereate_100_articles_with_titles
 
 import tensorflow as tf
 
@@ -26,18 +26,18 @@ class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
 
-    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1.):
+    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1., test=False):
         self.num_users = num_users
         self.num_items = num_items
         self.sessions = sessions
         self.embedding_dim = embedding_dim
         self.stddev = stddev
-
-        #TODO: This fills out the sparse spaces between articles. Should be rethought and refactored when we know exactly how to handle the sparse ids of articles.
-        self.articles = pd.read_sql_query("Select id, title from article", db.engine)
-        all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
-        all_null_df.fillna(0, inplace=True)
-        self.articles = pd.merge(all_null_df, self.articles, on='id', how='left', validate="many_to_many")
+        self.test=test
+        if(test):
+            print("warring running in test mode")
+            self.articles = genereate_100_articles_with_titles()
+        else:
+            self.articles = setup_df_rs(self.num_items)
 
     def split_dataframe(self, df: DataFrame, holdout_fraction=0.1):
         """Splits a DataFrame into training and test sets.
@@ -83,8 +83,13 @@ class RecommenderSystem:
         train_sessions, test_sessions = self.split_dataframe(self.sessions)
 
         # SparseTensor representation of the train and test datasets.
-        A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
-        A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
+        if(self.test):
+            A_train = build_mock_sparse_tensor()
+            A_test = build_mock_sparse_tensor() 
+        #No reason to split the data if we are testing, we just dublicate the testcase.
+        else:
+            A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
+            A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
 
         user_embeddings = tf.Variable(
             tf.random_normal(
