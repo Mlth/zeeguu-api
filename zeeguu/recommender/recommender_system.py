@@ -37,7 +37,7 @@ class RecommenderSystem:
         self.articles = pd.read_sql_query("Select id, title from article", db.engine)
         all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
         all_null_df.fillna(0, inplace=True)
-        self.articles = pd.merge(all_null_df, self.articles, on='id', how='left')
+        self.articles = pd.merge(all_null_df, self.articles, on='id', how='left', validate="many_to_many")
 
     def split_dataframe(self, df: DataFrame, holdout_fraction=0.1):
         """Splits a DataFrame into training and test sets.
