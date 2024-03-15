@@ -1,13 +1,13 @@
 from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
-from zeeguu.recommender.utils import  ShowData, days_since_normalizer, get_expected_reading_time, resource_path, lower_bound_reading_speed, upper_bound_reading_speed
+from zeeguu.recommender.utils import  ShowData, days_since_normalizer, get_expected_reading_time, get_resource_path, lower_bound_reading_speed, upper_bound_reading_speed
 import tensorflow as tf
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 
-class Visualizer:
+class SessionVisualizer:
     def get_diff_color(self, df, precise=False):
         if precise:
             return np.where(df['difficulty_feedback'] == 1, 'yellow', np.where(df['difficulty_feedback'] == 3, 'blue', 'black'))
@@ -84,7 +84,7 @@ class Visualizer:
         plt.title(title_string)
 
         #Change to '.svg' and format to 'svg' for svg.
-        plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
+        plt.savefig(get_resource_path() + file_name + '.png', format='png', dpi=900)
         print("Saving file: " + file_name + ".png")
         plt.show()
     
@@ -109,6 +109,6 @@ class Visualizer:
             axs[2].axis('off')
             axs[2].set_title('Density')'''
 
-            plt.savefig(resource_path + file_name + '.png', format='png', dpi=900)
+            plt.savefig(get_resource_path() + file_name + '.png', format='png', dpi=900)
             print("Saving file: " + file_name + ".png")
             plt.show()

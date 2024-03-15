@@ -27,15 +27,9 @@ class CFModel(object):
     """The embeddings dictionary."""
     return self._embeddings
 
-<<<<<<< Updated upstream
   def train(self, num_iterations=20, learning_rate=1, plot_results=True,
             optimizer=tf.train.GradientDescentOptimizer):
     """Trains the model.
-=======
-  def train(self, num_iterations=100, learning_rate=1, plot_results=True,
-            optimizer=tf.train.AdadeltaOptimizer):
-    """Trains the model
->>>>>>> Stashed changes
     Args:
       iterations: number of iterations to run.
       learning_rate: optimizer learning rate.
