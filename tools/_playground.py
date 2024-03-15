@@ -79,10 +79,15 @@ matrix = FeedbackMatrix(matrix_config)
 matrix.generate_dfs()
 liked_sessions_df = matrix.liked_sessions_df
 
+<<<<<<< Updated upstream
 print("here")
 # Define embedding layers for users and items
 num_users = matrix.max_user_id
 num_items = matrix.max_article_id
+=======
+sessions_df = matrix.liked_sessions_df
+print("--- %s seconds ---" % (time.time() - start_time))
+>>>>>>> Stashed changes
 
 if test:
     recommender = RecommenderSystem(500, 500)

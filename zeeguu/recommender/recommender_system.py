@@ -11,9 +11,13 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 class RecommenderSystem:
     cf_model = None
 
+<<<<<<< Updated upstream
     def __init__(self, num_users, num_items, embedding_dim=50, stddev=1.):
         self.user_embeddings = tf.Variable(tf.random_normal([num_users, embedding_dim], stddev=stddev))
         self.article_embeddings = tf.Variable(tf.random_normal([num_items, embedding_dim], stddev=stddev))
+=======
+    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1.):
+>>>>>>> Stashed changes
         self.num_users = num_users
         self.num_items = num_items
         self.embedding_dim = embedding_dim
