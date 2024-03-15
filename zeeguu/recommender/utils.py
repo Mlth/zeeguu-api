@@ -5,6 +5,9 @@ from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
 from zeeguu.core.model.user import User
 from zeeguu.core.model.article import Article
+import pandas as pd
+from zeeguu.core.model import db
+
 
 
 resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
@@ -130,3 +133,13 @@ def get_difficulty_adjustment(session, weight):
     difficulty = session.difficulty
     fk_difficulty = cefr_to_fk_difficulty(difficulty)
     return session.session_duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
+
+def setup_df_rs(num_items : int) -> pd.DataFrame:
+    '''fetches all articles and fills out the space between them
+    using fillna to avoid index out of bounds.
+    this is done so we cant kick them out later'''
+    articles = pd.read_sql_query("Select id, title from article", db.engine)
+    all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
+    all_null_df.fillna(0, inplace=True)
+    articles = pd.merge(all_null_df, articles, on='id', how='left', validate="many_to_many")
+    return articles
