@@ -8,7 +8,7 @@ from zeeguu.recommender.utils import ShowData, setup_df_rs
 import pandas as pd
 from IPython import display
 from zeeguu.recommender.utils import get_resource_path
-from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor, genereate_100_articles_with_titles
+from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor, genereate_100_articles_with_titles, setup_sessions
 
 import tensorflow as tf
 
@@ -80,23 +80,25 @@ class RecommenderSystem:
             model: a CFModel.
         """
         # Split the sessions DataFrame into train and test.
-        train_sessions, test_sessions = self.split_dataframe(self.sessions)
+       
 
         # SparseTensor representation of the train and test datasets.
         if(self.test):
-            A_train = build_mock_sparse_tensor()
-            A_test = build_mock_sparse_tensor() 
-        #No reason to split the data if we are testing, we just dublicate the testcase.
+            sessions = setup_sessions() # this is from the mocking file
+            train_sessions, test_sessions = self.split_dataframe(sessions)
+            A_train = build_mock_sparse_tensor(train_sessions)
+            A_test = build_mock_sparse_tensor(test_sessions)
         else:
+            train_sessions, test_sessions = self.split_dataframe(self.sessions)
             A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
             A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
 
         user_embeddings = tf.Variable(
-            tf.random_normal(
-                [self.num_users, self.embedding_dim], stddev=self.stddev))
+            tf.ones(
+                [self.num_users, self.embedding_dim], ))#stddev=self.stddev))
         article_embeddings = tf.Variable(
-            tf.random_normal(
-                [self.num_items, self.embedding_dim], stddev=self.stddev))
+            tf.ones(
+                [self.num_items, self.embedding_dim], ))#stddev=self.stddev))
 
         train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
