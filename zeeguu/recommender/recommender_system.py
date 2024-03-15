@@ -26,11 +26,7 @@ class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
 
-<<<<<<< Updated upstream
-    def __init__(self, sessions, num_users, num_items, embedding_dim=3, stddev=1.):
-=======
     def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1.):
->>>>>>> Stashed changes
         self.num_users = num_users
         self.num_items = num_items
         self.sessions = sessions
