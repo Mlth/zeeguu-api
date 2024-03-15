@@ -24,8 +24,15 @@ def build_mock_sparse_tensor(sessions):
     # Print the tensor within TensorFlow session
     with tf.compat.v1.Session() as sess:
         tensor_value = sess.run(dense_tensor)
-        print(tensor_value)
-
+        print("Mock Tensor (100x100):")
+        print("")  # Start with a newline before printing the matrix
+        for row in tensor_value:
+            colored_row = ' '.join(
+                f'\033[92m{val:.1f}\033[0m' if val == 1 else f'{val:.1f}' for val in row
+            )
+            print("   ", colored_row, "   ")
+        print("")  # Add an empty line after printing the matrix
+    
     return tensor
 
 def setup_sessions() -> Union[pd.DataFrame, pd.DataFrame]:
