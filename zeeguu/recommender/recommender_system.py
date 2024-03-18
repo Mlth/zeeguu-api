@@ -53,23 +53,23 @@ class RecommenderSystem:
         return train, test
 
     def sparse_mean_square_error(self, sparse_sessions, user_embeddings, article_embeddings):
-      """
-      Args:
-        sparse_ratings: A SparseTensor rating matrix, of dense_shape [N, M]
-        user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
-          dimension, such that U_i is the embedding of user i.
-        movie_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
-          dimension, such that V_j is the embedding of movie j.
-      Returns:
-        A scalar Tensor representing the MSE between the true ratings and the
-          model's predictions.
-      """
-      predictions = tf.reduce_sum(
-          tf.gather(user_embeddings, sparse_sessions.indices[:, 0]) *
-          tf.gather(article_embeddings, sparse_sessions.indices[:, 1]),
-          axis=1)
-      loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
-      return loss
+        """
+        Args:
+            sparse_sessions: A SparseTensor rating matrix, of dense_shape [N, M]
+            user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
+            dimension, such that U_i is the embedding of user i.
+            article_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
+            dimension, such that V_j is the embedding of movie j.
+        Returns:
+            A scalar Tensor representing the MSE between the true ratings and the
+            model's predictions.
+        """
+        predictions = tf.reduce_sum(
+            tf.gather(user_embeddings, sparse_sessions.indices[:, 0]) *
+            tf.gather(article_embeddings, sparse_sessions.indices[:, 1]),
+            axis=1)
+        loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
+        return loss
     
     def build_model(self):
         """
@@ -86,19 +86,19 @@ class RecommenderSystem:
         if(self.test):
             sessions = setup_sessions() # this is from the mocking file
             train_sessions, test_sessions = self.split_dataframe(sessions)
-            A_train = build_mock_sparse_tensor(train_sessions)
-            A_test = build_mock_sparse_tensor(test_sessions)
+            A_train = build_mock_sparse_tensor(train_sessions, "train")
+            A_test = build_mock_sparse_tensor(test_sessions, "test")
         else:
             train_sessions, test_sessions = self.split_dataframe(self.sessions)
             A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
             A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
 
         user_embeddings = tf.Variable(
-            tf.ones(
-                [self.num_users, self.embedding_dim], ))#stddev=self.stddev))
+            tf.fill(
+                [self.num_users, self.embedding_dim], 0.2))#stddev=self.stddev))
         article_embeddings = tf.Variable(
-            tf.ones(
-                [self.num_items, self.embedding_dim], ))#stddev=self.stddev))
+            tf.fill(
+                [self.num_items, self.embedding_dim], 0.2))#stddev=self.stddev))
 
         train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
@@ -131,7 +131,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id, measure=Measure.DOT, exclude_rated=False, k=6):
+    def user_recommendations(self, user_id, measure=Measure.DOT, exclude_rated=False, k=100):
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
 

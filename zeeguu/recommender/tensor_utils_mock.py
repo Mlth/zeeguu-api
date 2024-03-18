@@ -1,12 +1,9 @@
 import tensorflow as tf
 import pandas as pd
-import random
-import numpy as np
-from typing import Union
+import matplotlib.pyplot as plt
 
 
-def build_mock_sparse_tensor(sessions):
-    print("Building mock tensor")
+def build_mock_sparse_tensor(sessions,title):
     # Sort the indices
     sessions = sessions.sort_values(['user_id', 'article_id'])
     indices = sessions[['user_id', 'article_id']].values
@@ -18,24 +15,25 @@ def build_mock_sparse_tensor(sessions):
         dense_shape=[100, 100]
     )
 
-    # Convert sparse tensor to dense tensor
     dense_tensor = tf.sparse.to_dense(tensor)
-
+    name = title + ".png"
     # Print the tensor within TensorFlow session
     with tf.compat.v1.Session() as sess:
         tensor_value = sess.run(dense_tensor)
-        print("Mock Tensor (100x100):")
-        print("")  # Start with a newline before printing the matrix
-        for row in tensor_value:
-            colored_row = ' '.join(
-                f'\033[92m{val:.1f}\033[0m' if val == 1 else f'{val:.1f}' for val in row
-            )
-            print("   ", colored_row, "   ")
-        print("")  # Add an empty line after printing the matrix
+        # Create heatmap
+        plt.figure(figsize=(10, 8))
+        plt.imshow(tensor_value, cmap='viridis', aspect='auto')
+        plt.colorbar(label='Value')
+        plt.title('Mock Tensor (100x100)')
+        plt.xlabel('Article ID')
+        plt.ylabel('User ID')
+        plt.savefig(name)  # Save the plot to the specified filename
+    
+    print(f"Plot saved to {name}")
     
     return tensor
 
-def setup_sessions() -> Union[pd.DataFrame, pd.DataFrame]:
+def setup_sessions() -> pd.DataFrame:
     users = pd.DataFrame()
     users['id'] = range(0, 100)
     users['name'] = [f'user_{i}' for i in range(0, 100)]
@@ -50,18 +48,11 @@ def setup_sessions() -> Union[pd.DataFrame, pd.DataFrame]:
         if(max_article_id > 99):
             max_article_id = 100
         
-        # Select articles within the determined range
-        liked_articles = [article_id for article_id in range(min_article_id, max_article_id)]
-        
+        liked_articles = [article_id for article_id in range(min_article_id, max_article_id)]        
         # Append user ID, article IDs within the range, and the expected read value to sessions_data
         for article_id in liked_articles:
-            if(user_id == 50 or user_id == 0 or user_id == 99):
-                print(f"{user_id} likes {article_id}")
-            if(article_id == 50): #This is to show that everyone gets 50 recommended because none likes it 🤔🤔🤔
-                continue
-            else:
+            if(article_id != 50): #This is to show that everyone gets 50 recommended because none likes it 🤔🤔🤔
                 sessions_data.append({'user_id': user_id, 'article_id': article_id, 'expected_read': 1.0})
-
     # Create a DataFrame from sessions_data
     sessions = pd.DataFrame(sessions_data)
     return sessions

@@ -94,7 +94,7 @@ recommender.build_model()
 recommender.cf_model.train()
 
 if(test):
-   recommender.user_recommendations(50)
+   recommender.user_recommendations(2)
 else:
   recommender.user_recommendations(4338)
    
