@@ -43,9 +43,10 @@ sesh = db.session
 initial_candidate_pool()
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
-test = True
+test = False
 
 start_time = time.time()
+print("setting up config")
 
 matrix_config = FeedbackMatrixConfig(
     show_data=[],
@@ -61,28 +62,12 @@ matrix = FeedbackMatrix(matrix_config)
 matrix.generate_dfs()
 
 sessions_df = matrix.liked_sessions_df
-matrix.plot_sessions_df("difficulty-parameter")
+#matrix.plot_sessions_df("difficulty-parameter")
 
-print("setting up config")
 
-start_time = time.time()
-matrix_config = FeedbackMatrixConfig(
-        show_data=[],
-        data_since=accurate_duration_date,
-        adjustment_config=AdjustmentConfig(
-            difficulty_weight=5,
-            translation_adjustment_value=1
-        ),
-        test_tensor=test
-    )
-matrix = FeedbackMatrix(matrix_config)
-matrix.generate_dfs()
-liked_sessions_df = matrix.liked_sessions_df
-
-sessions_df = matrix.liked_sessions_df
 print("--- %s seconds ---" % (time.time() - start_time))
 
-if test:
+""" if test:
     recommender = RecommenderSystem(sessions_df, 100, 100, test=True)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
@@ -96,12 +81,12 @@ recommender.cf_model.train()
 if(test):
    recommender.user_recommendations(2)
 else:
-  recommender.user_recommendations(4338)
+  recommender.user_recommendations(4338) """
    
 
 #recommender.visualize_article_embeddings()
 
-print("--- %s seconds ---" % (time.time() - start_time))
+#print("--- %s seconds ---" % (time.time() - start_time))
 
 
 print("Ending playground")

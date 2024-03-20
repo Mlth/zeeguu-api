@@ -4,7 +4,7 @@ from zeeguu.core.model.user import User
 from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
 from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions
+from zeeguu.recommender.utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions, get_sum_of_translation_from_user_activity_data, get_all_user_article_information, get_all_article_difficulty_feedback
 from datetime import datetime
 import pandas as pd
 from collections import Counter
@@ -58,6 +58,7 @@ class FeedbackMatrix:
     have_read_sessions = None
     feedback_diff_list_toprint = None
     feedback_counter = 0
+    
 
     def __init__(self, config: FeedbackMatrixConfig):
         self.config = config
@@ -72,18 +73,28 @@ class FeedbackMatrix:
         print("Getting sessions")
         sessions: dict[tuple[int, int], FeedbackMatrixSession] = {}
         query_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
+        liked_data = get_all_user_article_information(self.config.data_since)
+        difficulty_feedback_data = get_all_article_difficulty_feedback(self.config.data_since)
 
         for session in query_data:
             article_id = session.article_id
             user_id = session.user_id
-            article = Article.find_by_id(article_id)
+            article = session.article
             session_duration = int(session.duration) / 1000 # in seconds
-            liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
+            if (user_id, article_id) in liked_data:
+                liked = liked_data[(user_id, article_id)]['liked']
+            else:
+                liked = 0
+            #liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
             if liked == (False,) or liked is None:
                 liked_value = 0 
             else: liked_value = 1
-            difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
-            difficulty_feedback_value = 0 if difficulty_feedback is None else int(difficulty_feedback[0])
+            #difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
+            if (user_id, article_id) in difficulty_feedback_data:
+                difficulty_feedback = difficulty_feedback_data[(user_id, article_id)]['difficulty_feedback']
+            else:
+                difficulty_feedback = 0
+            difficulty_feedback_value = difficulty_feedback #0 if difficulty_feedback is None else int(difficulty_feedback[0])
             if difficulty_feedback_value != 0:
                 self.feedback_counter += 1
             article_topic = article.topics
@@ -120,12 +131,16 @@ class FeedbackMatrix:
         liked_sessions = []
         feedback_diff_list = []
         have_read_sessions = 0
+        translate_data = get_sum_of_translation_from_user_activity_data(self.config.data_since)
 
         if self.config.adjustment_config is None:
             self.config.adjustment_config = AdjustmentConfig(difficulty_weight=self.default_difficulty_weight, translation_adjustment_value=self.default_translation_adjustment_value)
 
         for session in sessions.keys():
-            sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
+            #sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
+            if (sessions[session].user_id, sessions[session].article_id) in translate_data:
+                sessions[session].session_duration = translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
+
             sessions[session].session_duration = get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight)
 
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
@@ -147,6 +162,8 @@ class FeedbackMatrix:
 
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
+
+    
 
     def sessions_to_order_sessions(self, sessions: list[FeedbackMatrixSession]):
         '''Convert user and article ids of sessions to the order defined in our maps'''

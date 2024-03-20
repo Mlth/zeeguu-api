@@ -1,6 +1,9 @@
 from datetime import datetime
 import os
 from enum import Enum, auto
+from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
+from zeeguu.core.model.user_activitiy_data import UserActivityData
+from zeeguu.core.model.user_article import UserArticle
 from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
 from zeeguu.core.model.user import User
@@ -14,8 +17,9 @@ resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
 upper_bound_reading_speed = 45
 lower_bound_reading_speed = -35
+user_level_dict = None
 
-accurate_duration_date = datetime(day=30, month=1, year=2024)
+accurate_duration_date = datetime(day=30, month=1, year=2023)
 
 class ShowData(Enum):
     '''If no ShowData is chosen, all data will be retrieved and shown.'''
@@ -116,6 +120,54 @@ def get_user_reading_sessions(data_since: datetime, show_data: list[ShowData] = 
         query = query.filter(UserReadingSession.start_time >= data_since)
     
     return add_filters_to_query(query, show_data).all()
+
+def get_sum_of_translation_from_user_activity_data(data_since: datetime):
+    count_dict = {}
+    query = (
+        UserActivityData.query
+            .filter(UserActivityData.event.like('%TRANSLATE TEXT%'))
+            .filter(UserActivityData.time >= data_since)
+    )
+    for row in query:
+        if (row.user_id, row.article_id) not in count_dict:
+            count_dict[(row.user_id, row.article_id)] = {
+                'count': 1,
+            }
+        else:
+            count_dict[(row.user_id, row.article_id)]['count'] += 1
+    
+    return count_dict
+
+def get_all_user_article_information(data_since: datetime):
+
+    liked_dict = {}
+    query = (
+        UserArticle.query
+            .filter(UserArticle.opened.isnot(None))
+            .filter(UserArticle.opened >= data_since)
+    )
+    for row in query:
+        if (row.user_id, row.article_id) not in liked_dict:
+            liked_dict[(row.user_id, row.article_id)] = { 'liked': int(row.liked) }
+        else:
+            liked_dict[(row.user_id, row.article_id)]['liked'] = row.liked
+
+    return liked_dict
+
+def get_all_article_difficulty_feedback(data_since: datetime):
+    feedback_dict = {}
+    query = (
+        ArticleDifficultyFeedback.query
+            .filter(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
+            .filter(ArticleDifficultyFeedback.date >= data_since)
+    )
+    for row in query:
+        if (row.user_id, row.article_id) not in feedback_dict:
+            feedback_dict[(row.user_id, row.article_id)] = { 'difficulty_feedback': row.difficulty_feedback }
+        else:
+            feedback_dict[(row.user_id, row.article_id)]['difficulty_feedback'] = row.difficulty_feedback
+
+    return feedback_dict
 
 
 def get_difficulty_adjustment(session, weight):
