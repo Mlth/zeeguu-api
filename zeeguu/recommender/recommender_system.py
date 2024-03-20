@@ -27,7 +27,7 @@ class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
 
-    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1., test=False,generator_function=None):
+    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1.,test=False,generator_function=None):
         self.num_users = num_users
         self.num_items = num_items
         self.sessions = sessions
@@ -133,7 +133,6 @@ class RecommenderSystem:
     def user_recommendations(self, user_id, measure=Measure.DOT, exclude_rated=False, k=100):
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
-
         if should_recommend:
             scores = self.compute_scores(
                 self.cf_model.embeddings["user_id"][user_id], self.cf_model.embeddings["article_id"], measure)
