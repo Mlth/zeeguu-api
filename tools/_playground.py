@@ -3,7 +3,7 @@ from zeeguu.core.model import db
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
 from zeeguu.recommender.utils import accurate_duration_date
-from zeeguu.recommender.visualization.tensor_visualizer import setup_session_5_likes_range
+from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range
 from zeeguu.recommender.recommender_system import RecommenderSystem
 
 app = create_app()
@@ -36,7 +36,7 @@ print("--- %s seconds for feedbackmatrix ---" % (time.time() - start_time))
 generator_function = setup_session_5_likes_range
 
 if test:
-    recommender = RecommenderSystem(sessions_df, 100, 100, test=True, generator_function=generator_function)
+    recommender = RecommenderSystem(sessions_df, 10, 50, test=True, generator_function=generator_function)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 

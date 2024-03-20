@@ -8,8 +8,8 @@ from zeeguu.recommender.utils import ShowData, setup_df_rs
 import pandas as pd
 from IPython import display
 from zeeguu.recommender.utils import get_resource_path
-from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor
-from zeeguu.recommender.visualization.tensor_visualizer import genereate_100_articles_with_titles
+from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
+from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
 
 import tensorflow as tf
 
@@ -37,7 +37,7 @@ class RecommenderSystem:
         self.generator_function = generator_function #this has to be a function that returns a dataframe
         if(test):
             print("warring running in test mode")
-            self.articles = genereate_100_articles_with_titles()
+            self.articles = generate_articles_with_titles(num_items)
         else:
             self.articles = setup_df_rs(self.num_items)
 
@@ -83,7 +83,7 @@ class RecommenderSystem:
         """
         # SparseTensor representation of the train and test datasets.
         if(self.test):
-            sessions = self.generator_function() 
+            sessions = self.generator_function(self.num_users, self.num_items) 
             train_sessions, test_sessions = self.split_dataframe(sessions)
             A_train = build_mock_sparse_tensor(train_sessions, "train")
             A_test = build_mock_sparse_tensor(test_sessions, "test")
@@ -130,7 +130,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id, measure=Measure.DOT, exclude_rated=False, k=100):
+    def user_recommendations(self, user_id, measure=Measure.DOT, exclude_rated=False):
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
         if should_recommend:
@@ -146,7 +146,7 @@ class RecommenderSystem:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values
                 df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
-            display.display(df.sort_values([score_key], ascending=False).head(k))
+            display.display(df.sort_values([score_key], ascending=False).head(self.num_items))
         else:
             # Possibly do elastic stuff to just give some random recommendations
             return
