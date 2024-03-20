@@ -13,6 +13,7 @@ from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query
 from zeeguu.core.elastic.indexing import index_all_articles
 from datetime import datetime, timedelta
 from zeeguu.recommender.utils import accurate_duration_date
+from zeeguu.recommender.visualization.tensor_visualizer import setup_session_5_likes_range
 
 import tensorflow as tf
 from zeeguu.recommender.recommender_system import RecommenderSystem
@@ -47,24 +48,7 @@ test = True
 
 start_time = time.time()
 
-matrix_config = FeedbackMatrixConfig(
-    show_data=[],
-    data_since=accurate_duration_date,
-    adjustment_config=AdjustmentConfig(
-        difficulty_weight=2,
-        translation_adjustment_value=1
-    ),
-    test_tensor=test
-)
-
-matrix = FeedbackMatrix(matrix_config)
-matrix.generate_dfs()
-
-sessions_df = matrix.liked_sessions_df
-matrix.plot_sessions_df("difficulty-parameter")
-
 print("setting up config")
-
 start_time = time.time()
 matrix_config = FeedbackMatrixConfig(
         show_data=[],
@@ -82,8 +66,10 @@ liked_sessions_df = matrix.liked_sessions_df
 sessions_df = matrix.liked_sessions_df
 print("--- %s seconds ---" % (time.time() - start_time))
 
+generator_function = setup_session_5_likes_range
+
 if test:
-    recommender = RecommenderSystem(sessions_df, 100, 100, test=True)
+    recommender = RecommenderSystem(sessions_df, 100, 100, test=True, generator_function=generator_function)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 

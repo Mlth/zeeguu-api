@@ -9,7 +9,7 @@ import pandas as pd
 from IPython import display
 from zeeguu.recommender.utils import get_resource_path
 from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor
-from zeeguu.recommender.visualization.tensor_visualizer import genereate_100_articles_with_titles, setup_session_5_likes_range
+from zeeguu.recommender.visualization.tensor_visualizer import genereate_100_articles_with_titles
 
 import tensorflow as tf
 
@@ -27,13 +27,14 @@ class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
 
-    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1., test=False):
+    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1., test=False,generator_function=None):
         self.num_users = num_users
         self.num_items = num_items
         self.sessions = sessions
         self.embedding_dim = embedding_dim
         self.stddev = stddev
         self.test=test
+        self.generator_function = generator_function #this has to be a function that returns a dataframe
         if(test):
             print("warring running in test mode")
             self.articles = genereate_100_articles_with_titles()
@@ -80,12 +81,9 @@ class RecommenderSystem:
         Returns:
             model: a CFModel.
         """
-        # Split the sessions DataFrame into train and test.
-       
-
         # SparseTensor representation of the train and test datasets.
         if(self.test):
-            sessions = setup_session_5_likes_range() # this is from the mocking file
+            sessions = self.generator_function() 
             train_sessions, test_sessions = self.split_dataframe(sessions)
             A_train = build_mock_sparse_tensor(train_sessions, "train")
             A_test = build_mock_sparse_tensor(test_sessions, "test")
