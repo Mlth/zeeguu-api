@@ -2,7 +2,7 @@ import tensorflow as tf
 import zeeguu.recommender.visualization.tensor_visualizer as tv
 
 
-def build_mock_sparse_tensor(sessions,title):
+def build_mock_sparse_tensor(sessions,title, num_users, num_articles):
     '''
     A mocked version of a tensor that takes well aligned input and sends the tensor to a visualizer.
     and saves it in the resources folder.
@@ -19,7 +19,7 @@ def build_mock_sparse_tensor(sessions,title):
     tensor = tf.SparseTensor(
         indices=indices,
         values=values,
-        dense_shape=[100, 100]
+        dense_shape=[num_users, num_articles]
     )
     dense_tensor = tf.sparse.to_dense(tensor)
     # Print the tensor within TensorFlow session

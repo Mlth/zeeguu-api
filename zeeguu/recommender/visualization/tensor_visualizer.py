@@ -14,9 +14,10 @@ def visualize_tensor(tensor, name):
     plt.figure(figsize=(10, 8))
     plt.imshow(tensor, cmap='viridis', aspect='auto')
     plt.colorbar(label='Value')
-    plt.title('Mock Tensor (100x100)')
+    plt.title('Mock Tensor')
     plt.xlabel('Article ID')
     plt.ylabel('User ID')
+    plt.grid(True)
     plt.savefig(name)
     
     print(f"Plot saved to {name}")

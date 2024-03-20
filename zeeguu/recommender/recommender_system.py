@@ -85,19 +85,19 @@ class RecommenderSystem:
         if(self.test):
             sessions = self.generator_function(self.num_users, self.num_items) 
             train_sessions, test_sessions = self.split_dataframe(sessions)
-            A_train = build_mock_sparse_tensor(train_sessions, "train")
-            A_test = build_mock_sparse_tensor(test_sessions, "test")
+            A_train = build_mock_sparse_tensor(train_sessions, "train", self.num_users, self.num_items)
+            A_test = build_mock_sparse_tensor(test_sessions, "test", self.num_users, self.num_items)
         else:
             train_sessions, test_sessions = self.split_dataframe(self.sessions)
             A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
             A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
 
         user_embeddings = tf.Variable(
-            tf.fill(
-                [self.num_users, self.embedding_dim], 0.2))#stddev=self.stddev))
+            tf.random_normal(
+                [self.num_users, self.embedding_dim], stddev=self.stddev))
         article_embeddings = tf.Variable(
-            tf.fill(
-                [self.num_items, self.embedding_dim], 0.2))#stddev=self.stddev))
+            tf.random_normal(
+                [self.num_items, self.embedding_dim], stddev=self.stddev))
 
         train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)

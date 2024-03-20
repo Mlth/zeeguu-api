@@ -3,7 +3,7 @@ from zeeguu.core.model import db
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
 from zeeguu.recommender.utils import accurate_duration_date
-from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range
+from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories
 from zeeguu.recommender.recommender_system import RecommenderSystem
 
 app = create_app()
@@ -33,10 +33,9 @@ liked_sessions_df = matrix.liked_sessions_df
 sessions_df = matrix.liked_sessions_df
 print("--- %s seconds for feedbackmatrix ---" % (time.time() - start_time))
 
-generator_function = setup_session_5_likes_range
 
 if test:
-    recommender = RecommenderSystem(sessions_df, 10, 50, test=True, generator_function=generator_function)
+    recommender = RecommenderSystem(sessions_df, 100, 100, test=True, generator_function=setup_session_2_categories)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
@@ -47,14 +46,13 @@ recommender.build_model()
 recommender.cf_model.train()
 
 if(test):
-   recommender.user_recommendations(2)
+   recommender.user_recommendations(0)
 else:
   recommender.user_recommendations(4338)
    
 print("--- %s seconds --- for training and recommending" % (time.time() - start_time))
 
-
-#this takes a very long time.. hmm
+#TODO FIX FOR TEST CASES ASWELL 
 recommender.visualize_article_embeddings()
 print("--- %s seconds --- for visualizations" % (time.time() - start_time))
 
