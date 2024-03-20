@@ -8,7 +8,8 @@ from zeeguu.recommender.utils import ShowData, setup_df_rs
 import pandas as pd
 from IPython import display
 from zeeguu.recommender.utils import get_resource_path
-from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor, genereate_100_articles_with_titles, setup_sessions
+from zeeguu.recommender.tensor_utils_mock import build_mock_sparse_tensor
+from zeeguu.recommender.visualization.tensor_visualizer import genereate_100_articles_with_titles, setup_session_5_likes_range
 
 import tensorflow as tf
 
@@ -84,7 +85,7 @@ class RecommenderSystem:
 
         # SparseTensor representation of the train and test datasets.
         if(self.test):
-            sessions = setup_sessions() # this is from the mocking file
+            sessions = setup_session_5_likes_range() # this is from the mocking file
             train_sessions, test_sessions = self.split_dataframe(sessions)
             A_train = build_mock_sparse_tensor(train_sessions, "train")
             A_test = build_mock_sparse_tensor(test_sessions, "test")

@@ -99,7 +99,7 @@ else:
   recommender.user_recommendations(4338)
    
 
-#recommender.visualize_article_embeddings()
+recommender.visualize_article_embeddings()
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
