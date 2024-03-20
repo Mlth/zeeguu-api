@@ -33,6 +33,4 @@ tools/_playground.py
 /tmp
 
 zeeguu-anonymized-*
-test.png
-train.png
-zeeguu/recommender/resources/article_embeddings.json
+zeeguu/recommender/resources/*

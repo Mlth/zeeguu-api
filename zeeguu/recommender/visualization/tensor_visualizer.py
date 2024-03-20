@@ -12,9 +12,7 @@ def visualize_tensor(tensor, name):
         name: the filename to save the plot to.
     """
 
-    name = name + ".png"
-    name = os.path.join(os.getcwd(), 'zeeguu', 'recommender', 'resources')
-    
+    name = os.path.join(os.getcwd(), 'zeeguu', 'recommender', 'resources', name + '.png')    
     plt.figure(figsize=(10, 8))
     plt.imshow(tensor, cmap='viridis', aspect='auto')
     plt.colorbar(label='Value')
