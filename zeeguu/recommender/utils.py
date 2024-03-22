@@ -109,6 +109,7 @@ def get_user_reading_sessions(data_since: datetime, show_data: list[ShowData] = 
         UserReadingSession.query
             .join(User, User.id == UserReadingSession.user_id)
             .join(Article, Article.id == UserReadingSession.article_id)
+            .join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id), isouter=True)
             .filter(Article.broken == 0)
             .filter(User.is_dev == False)
             .filter(UserReadingSession.article_id.isnot(None))
@@ -118,6 +119,23 @@ def get_user_reading_sessions(data_since: datetime, show_data: list[ShowData] = 
     )
     if data_since:
         query = query.filter(UserReadingSession.start_time >= data_since)
+
+    """ print("The whole thing")
+    print(query.__dict__)
+    print(query)
+    for row in query[:1]:
+        print(row)
+    for row in query[:1]:
+        print(row.__dict__)
+    print("User")
+    for row in query[:1]:
+        print(row.user.__dict__)
+    print("Article")
+    for row in query[:1]:
+        print(row.article.__dict__)
+    print("User Article")
+    for row in query[:1]:
+        print(row.user_article.__dict__) """
     
     return add_filters_to_query(query, show_data).all()
 
@@ -169,19 +187,39 @@ def get_all_article_difficulty_feedback(data_since: datetime):
 
     return feedback_dict
 
+def get_all_user_language_levels():
+    user_level_dict = {}
+    query = (
+        UserLanguage.query
+            .filter(UserLanguage.cefr_level.isnot(None))
+    )
+    for row in query[:2]:
+        if (row.user_id, row.language_id) not in user_level_dict:
+            user_level_dict[(row.user_id, row.language_id)] = { 'cefr_level': row.cefr_level }
+        else:
+            user_level_dict[(row.user_id, row.language_id)]['cefr_level'] = row.cefr_level
+    
+    """ for row in user_level_dict:
+        print(row)
+        print(user_level_dict[row]) """
 
-def get_difficulty_adjustment(session, weight):
-    user_level_query = (
+    return user_level_dict  
+
+
+def get_difficulty_adjustment(session, weight, user_level_query):
+    
+
+    """ user_level_query = (
         UserLanguage.query
             .filter_by(user_id = session.user_id, language_id=session.language_id)
             .filter(UserLanguage.cefr_level.isnot(None))
             .with_entities(UserLanguage.cefr_level)
             .first()
-    )
+    ) """
     
     if user_level_query is None or user_level_query[0] == 0 or user_level_query[0] is None or user_level_query[0] == [] or user_level_query == []:
         return session.session_duration
-    user_level = user_level_query[0]
+    user_level = user_level_query
     difficulty = session.difficulty
     fk_difficulty = cefr_to_fk_difficulty(difficulty)
     return session.session_duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
