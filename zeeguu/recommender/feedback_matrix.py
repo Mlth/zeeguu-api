@@ -72,9 +72,11 @@ class FeedbackMatrix:
         '''Gets all user reading sessions with respect to the given config'''
         print("Getting sessions")
         sessions: dict[tuple[int, int], FeedbackMatrixSession] = {}
-        query_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
+        query_data, liked_data, difficulty_feedback_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
+        
+        """ query_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
         liked_data = get_all_user_article_information(self.config.data_since)
-        difficulty_feedback_data = get_all_article_difficulty_feedback(self.config.data_since)
+        difficulty_feedback_data = get_all_article_difficulty_feedback(self.config.data_since) """
 
         for session in query_data:
             article_id = session.article_id

@@ -49,8 +49,8 @@ start_time = time.time()
 print("setting up config")
 
 matrix_config = FeedbackMatrixConfig(
-    show_data=[],
-    data_since=accurate_duration_date,
+    show_data=[ShowData.LIKED, ShowData.RATED_DIFFICULTY],
+    data_since=  datetime.now() - timedelta(days=365), # accurate_duration_date,
     adjustment_config=AdjustmentConfig(
         difficulty_weight=2,
         translation_adjustment_value=1

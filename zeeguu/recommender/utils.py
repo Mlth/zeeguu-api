@@ -19,7 +19,7 @@ upper_bound_reading_speed = 45
 lower_bound_reading_speed = -35
 user_level_dict = None
 
-accurate_duration_date = datetime(day=30, month=1, year=2023)
+accurate_duration_date = datetime(day=30, month=1, year=2024)
 
 class ShowData(Enum):
     '''If no ShowData is chosen, all data will be retrieved and shown.'''
@@ -105,11 +105,12 @@ def add_filters_to_query(query, show_data: list[ShowData]):
 
 def get_user_reading_sessions(data_since: datetime, show_data: list[ShowData] = []):
     print("Getting all user reading sessions")
+    liked_dict = {}
+    feedback_dict = {}
     query = (
         UserReadingSession.query
             .join(User, User.id == UserReadingSession.user_id)
             .join(Article, Article.id == UserReadingSession.article_id)
-            .join(UserArticle, (UserArticle.article_id == UserReadingSession.article_id) & (UserArticle.user_id == UserReadingSession.user_id), isouter=True)
             .filter(Article.broken == 0)
             .filter(User.is_dev == False)
             .filter(UserReadingSession.article_id.isnot(None))
@@ -120,24 +121,13 @@ def get_user_reading_sessions(data_since: datetime, show_data: list[ShowData] = 
     if data_since:
         query = query.filter(UserReadingSession.start_time >= data_since)
 
-    """ print("The whole thing")
-    print(query.__dict__)
-    print(query)
-    for row in query[:1]:
-        print(row)
-    for row in query[:1]:
-        print(row.__dict__)
-    print("User")
-    for row in query[:1]:
-        print(row.user.__dict__)
-    print("Article")
-    for row in query[:1]:
-        print(row.article.__dict__)
-    print("User Article")
-    for row in query[:1]:
-        print(row.user_article.__dict__) """
+    if ShowData.LIKED in show_data:
+        liked_dict = get_all_user_article_information(data_since)
+    if ShowData.RATED_DIFFICULTY in show_data:
+        feedback_dict = get_all_article_difficulty_feedback(data_since)
+
     
-    return add_filters_to_query(query, show_data).all()
+    return query, liked_dict, feedback_dict 
 
 def get_sum_of_translation_from_user_activity_data(data_since: datetime):
     count_dict = {}
