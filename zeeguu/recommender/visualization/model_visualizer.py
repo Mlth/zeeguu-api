@@ -1,4 +1,3 @@
-import os
 import altair as alt
 import sklearn
 import sklearn.manifold

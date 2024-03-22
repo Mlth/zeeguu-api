@@ -42,7 +42,7 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: list[ShowData], adjustment_config: AdjustmentConfig, test_tensor: bool = False, data_since: datetime = None):
+    def __init__(self, show_data: 'list[ShowData]', adjustment_config: AdjustmentConfig, test_tensor: bool = False, data_since: datetime = None):
         self.show_data = show_data
         self.data_since = data_since
         self.adjustment_config = adjustment_config
@@ -115,7 +115,7 @@ class FeedbackMatrix:
             (datetime.now() - session.start_time).days,
         )
     
-    def get_sessions_data(self, sessions: dict[tuple[int, int], FeedbackMatrixSession]):
+    def get_sessions_data(self, sessions: 'dict[tuple[int, int], FeedbackMatrixSession]'):
         '''Manipulate data for each session in the sessions dict, according to the parameters given in the config.'''
         liked_sessions = []
         feedback_diff_list = []
@@ -148,7 +148,7 @@ class FeedbackMatrix:
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
 
-    def sessions_to_order_sessions(self, sessions: list[FeedbackMatrixSession]):
+    def sessions_to_order_sessions(self, sessions: 'list[FeedbackMatrixSession]'):
         '''Convert user and article ids of sessions to the order defined in our maps'''
         liked_sessions = sessions
         for i in range(len(liked_sessions)):
@@ -170,12 +170,12 @@ class FeedbackMatrix:
         self.have_read_sessions = have_read_sessions
         self.feedback_diff_list_toprint = feedback_diff_list
 
-    def __session_map_to_df(self, sessions: dict[tuple[int, int], FeedbackMatrixSession]):
+    def __session_map_to_df(self, sessions: 'dict[tuple[int, int], FeedbackMatrixSession]'):
         data = {index: vars(session) for index, session in sessions.items()}
         df = pd.DataFrame.from_dict(data, orient='index')
         return df
 
-    def __session_list_to_df(self, sessions: list[FeedbackMatrixSession]):
+    def __session_list_to_df(self, sessions: 'list[FeedbackMatrixSession]'):
         # Pretty weird logic. We convert a list to a dict and then to a dataframe. Should be changed.
         data = {index: vars(session) for index, session in enumerate(sessions)}
         df = pd.DataFrame.from_dict(data, orient='index')
