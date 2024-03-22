@@ -6,7 +6,7 @@ from zeeguu.core.elastic.elastic_query_builder import build_elastic_recommender_
 from zeeguu.core.content_recommender.elastic_recommender import _to_articles_from_ES_hits, article_recommendations_for_user, candidate
 
 
-def build_candidate_pool_for_lang(language: str,search: str = None, limit: int = None) -> list[candidate]:
+def build_candidate_pool_for_lang(language: str,search: str = None, limit: int = None) -> 'list[candidate]':
     '''Input must be in lowercase short form
     Examples: en, da, ru.. without limit you get about 30.000 articles returned here, its optional
     call with true if you want to do a search, otherwise it will recommend'''
@@ -47,14 +47,14 @@ def build_candidate_pool_for_lang(language: str,search: str = None, limit: int =
     return Article.find_by_language(lang)
 
     
-def build_candidate_pool_for_user(user_id: int) -> list[candidate]:
+def build_candidate_pool_for_user(user_id: int) -> 'list[candidate]':
     '''Returns a list of articles for a user with whatever constraints they have'''
     u = User.find_by_id(user_id)
     count = len(Article.find_by_language(u.learned_language))
     return article_recommendations_for_user(u,count)
 
 
-def initial_candidate_pool() -> list[Article]:
+def initial_candidate_pool() -> 'list[Article]':
     query = (
         Article.query
          .filter_by(broken=0)

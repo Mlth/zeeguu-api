@@ -35,7 +35,7 @@ print("--- %s seconds for feedbackmatrix ---" % (time.time() - start_time))
 
 
 if test:
-    recommender = RecommenderSystem(sessions_df, 100, 100, test=True, generator_function=setup_session_2_categories)
+    recommender = RecommenderSystem(sessions_df, 10, 10, test=True, generator_function=setup_session_2_categories)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
@@ -53,7 +53,7 @@ else:
 print("--- %s seconds --- for training and recommending" % (time.time() - start_time))
 
 #TODO FIX FOR TEST CASES ASWELL 
-recommender.visualize_article_embeddings()
+#recommender.visualize_article_embeddings()
 print("--- %s seconds --- for visualizations" % (time.time() - start_time))
 
 

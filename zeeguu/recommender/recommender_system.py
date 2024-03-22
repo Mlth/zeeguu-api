@@ -1,22 +1,21 @@
-from enum import Enum, auto
+from enum import Enum
 import numpy as np
-from pandas import DataFrame
-from zeeguu.core.model.article import Article
 from zeeguu.recommender.cf_model import CFModel
 from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils import ShowData, setup_df_rs
+from zeeguu.recommender.utils import setup_df_rs
 import pandas as pd
+from typing import Callable
 from IPython import display
-from zeeguu.recommender.utils import get_resource_path
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
 from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
-
-import tensorflow as tf
-
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
+import tensorflow as tf
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
+@tf.function(experimental_follow_type_hints=True)
+
+
 
 class Measure(Enum):
     # If no ShowData is chosen, all data will be retrieved and shown.
@@ -27,21 +26,29 @@ class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
 
-    def __init__(self, sessions, num_users, num_items, embedding_dim=20, stddev=1.,test=False,generator_function=None):
+    def __init__(self,
+                sessions : pd.DataFrame,
+                num_users: int,
+                num_items: int,
+                embedding_dim : int =20,
+                stddev :float =1.0,
+                test=False,
+                generator_function: Callable=None #function type
+                ):
         self.num_users = num_users
         self.num_items = num_items
         self.sessions = sessions
         self.embedding_dim = embedding_dim
         self.stddev = stddev
         self.test=test
-        self.generator_function = generator_function #this has to be a function that returns a dataframe
+        self.generator_function = generator_function
         if(test):
             print("warring running in test mode")
             self.articles = generate_articles_with_titles(num_items)
         else:
             self.articles = setup_df_rs(self.num_items)
 
-    def split_dataframe(self, df: DataFrame, holdout_fraction=0.1):
+    def split_dataframe(self, df: pd.DataFrame, holdout_fraction : float =0.1):
         """Splits a DataFrame into training and test sets.
         Args:
             df: a dataframe.
@@ -54,7 +61,8 @@ class RecommenderSystem:
         train = df[~df.index.isin(test.index)]
         return train, test
 
-    def sparse_mean_square_error(self, sparse_sessions, user_embeddings, article_embeddings):
+
+    def sparse_mean_square_error(self, sparse_sessions : tf.Tensor , user_embeddings : tf.Tensor, article_embeddings : tf.Tensor):
         """
         Args:
             sparse_sessions: A SparseTensor rating matrix, of dense_shape [N, M]
@@ -72,6 +80,7 @@ class RecommenderSystem:
             axis=1)
         loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
         return loss
+        
     
     def build_model(self):
         """
@@ -130,7 +139,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id, measure=Measure.DOT, exclude_rated=False):
+    def user_recommendations(self, user_id : int, measure : Measure =Measure.DOT, exclude_rated: bool =False):
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
         if should_recommend:
