@@ -21,6 +21,13 @@ services:
     depends_on:
       - elasticsearch
 
+  readability_server:
+    image: aecrimus/readability_server
+    ports:
+      - 3456:3456
+    networks:
+      - zeeguu_backend
+    restart: unless-stopped
 
   elasticsearch:
     image: elasticsearch:7.6.2
