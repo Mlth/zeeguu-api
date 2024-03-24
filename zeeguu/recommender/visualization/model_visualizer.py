@@ -12,7 +12,7 @@ class ModelVisualizer:
 
         nearest = alt.selection_point(
             encodings=['x', 'y'], on='mouseover', nearest=True, empty=True)
-        base = alt.Chart(data).mark_circle().encode(
+        base = alt.Chart().mark_circle().encode(
             x=x,
             y=y,
             color=alt.condition('datum.is_marked', alt.value('red'), alt.value('blue')),
@@ -20,11 +20,11 @@ class ModelVisualizer:
             width=600,
             height=600,
         ).add_params(nearest)
-        text = alt.Chart(data).mark_text(align='left', dx=5, dy=-5).encode(
+        text = alt.Chart().mark_text(align='left', dx=5, dy=-5).encode(
             x=x,
             y=y,
             text=alt.condition(nearest, 'title', alt.value('')))
-        return alt.hconcat(alt.layer(base, text))
+        return alt.hconcat(alt.layer(base, text), data=data)
     
     def __tsne_article_embeddings(self, model, articles):
         """Visualizes the article embeddings, projected using t-SNE with Cosine measure.
