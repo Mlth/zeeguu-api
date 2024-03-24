@@ -2,23 +2,29 @@ import altair as alt
 import sklearn
 import sklearn.manifold
 from zeeguu.recommender.utils import get_resource_path
+from typing import List
 
 class ModelVisualizer:
-    def __visualize_article_embeddings(self, data, x, y):
+    def __visualize_article_embeddings(self, model, articles, x, y, marked_articles):
+        data = self.__tsne_article_embeddings(model, articles)
+
+        data['is_marked'] = data['id'].isin(marked_articles)
+
         nearest = alt.selection_point(
             encodings=['x', 'y'], on='mouseover', nearest=True, empty=True)
-        base = alt.Chart().mark_circle().encode(
+        base = alt.Chart(data).mark_circle().encode(
             x=x,
             y=y,
+            color=alt.condition('datum.is_marked', alt.value('red'), alt.value('blue')),
         ).properties(
             width=600,
             height=600,
         ).add_params(nearest)
-        text = alt.Chart().mark_text(align='left', dx=5, dy=-5).encode(
+        text = alt.Chart(data).mark_text(align='left', dx=5, dy=-5).encode(
             x=x,
             y=y,
             text=alt.condition(nearest, 'title', alt.value('')))
-        return alt.hconcat(alt.layer(base, text), data=data)
+        return alt.hconcat(alt.layer(base, text))
     
     def __tsne_article_embeddings(self, model, articles):
         """Visualizes the article embeddings, projected using t-SNE with Cosine measure.
@@ -33,7 +39,7 @@ class ModelVisualizer:
         V_proj = tsne.fit_transform(model.embeddings["article_id"])
         articles.loc[:,'x'] = V_proj[:, 0]
         articles.loc[:,'y'] = V_proj[:, 1]
-        return self.__visualize_article_embeddings(articles, 'x', 'y')
+        return articles
     
-    def visualize_tsne_article_embeddings(self, model, articles):
-        return self.__tsne_article_embeddings(model, articles).save(get_resource_path() + "article_embeddings.json")
+    def visualize_tsne_article_embeddings(self, model, articles, marked_articles):
+        return self.__visualize_article_embeddings(model, articles, 'x', 'y', marked_articles).save(get_resource_path() + "article_embeddings.json")

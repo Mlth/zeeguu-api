@@ -2,6 +2,8 @@
 import matplotlib.pyplot as plt
 import os
 
+from zeeguu.recommender.utils import get_resource_path
+
 def visualize_tensor(tensor, name):
     """
     Visualize a tensor as a heatmap.
@@ -10,7 +12,7 @@ def visualize_tensor(tensor, name):
         name: the filename to save the plot to.
     """
 
-    name = os.path.join(os.getcwd(), 'zeeguu', 'recommender', 'resources', name + '.png')    
+    name = os.path.join(get_resource_path(), name + '.png')
     plt.figure(figsize=(10, 8))
     plt.imshow(tensor, cmap='viridis', aspect='auto')
     plt.colorbar(label='Value')
