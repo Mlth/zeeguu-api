@@ -9,14 +9,9 @@ from zeeguu.recommender.recommender_system import RecommenderSystem
 app = create_app()
 app.app_context().push()
 print("Starting playground")
-sesh = db.session
 
 test = True #enable this if you want constructed examples for debugging the recommendersystem.
 
-start_time = time.time()
-
-print("setting up config")
-start_time = time.time()
 matrix_config = FeedbackMatrixConfig(
         show_data=[],
         data_since=accurate_duration_date,
@@ -26,35 +21,28 @@ matrix_config = FeedbackMatrixConfig(
         ),
         test_tensor=test
     )
+
 matrix = FeedbackMatrix(matrix_config)
 matrix.generate_dfs()
-liked_sessions_df = matrix.liked_sessions_df
 
 sessions_df = matrix.liked_sessions_df
-print("--- %s seconds for feedbackmatrix ---" % (time.time() - start_time))
-
 
 if test:
-    recommender = RecommenderSystem(sessions_df, 10, 10, test=True, generator_function=setup_session_2_categories)
+    recommender = RecommenderSystem(sessions_df, 500, 500, test=True, generator_function=setup_session_2_categories)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
-start_time = time.time()
+recommender.build_regularized_model()
 
-recommender.build_model()
-
-recommender.cf_model.train()
+recommender.cf_model.train(num_iterations=50000, learning_rate=0.15)
 
 if(test):
-   recommender.user_recommendations(0)
+    recommender.user_recommendations(1)
 else:
-  recommender.user_recommendations(4338)
-   
-print("--- %s seconds --- for training and recommending" % (time.time() - start_time))
+    recommender.user_recommendations(4338)
 
-#TODO FIX FOR TEST CASES ASWELL 
-#recommender.visualize_article_embeddings()
-print("--- %s seconds --- for visualizations" % (time.time() - start_time))
-
+if test:
+    user_liked_articles = list(recommender.sessions[recommender.sessions['user_id'] == 1]['article_id'])
+    recommender.visualize_article_embeddings(marked_articles=user_liked_articles)
 
 print("Ending playground")

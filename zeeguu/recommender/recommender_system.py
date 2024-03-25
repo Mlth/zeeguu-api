@@ -1,7 +1,7 @@
 from enum import Enum
 import numpy as np
 from zeeguu.recommender.cf_model import CFModel
-from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
+from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor, gravity
 from zeeguu.recommender.utils import setup_df_rs
 import pandas as pd
 from typing import Callable
@@ -9,8 +9,8 @@ from IPython import display
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
 from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
-import tensorflow as tf
-tf = tf.compat.v1
+import tensorflow as tfi
+tf = tfi.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 @tf.function(experimental_follow_type_hints=True)
@@ -31,7 +31,6 @@ class RecommenderSystem:
                 num_users: int,
                 num_items: int,
                 embedding_dim : int =20,
-                stddev :float =1.0,
                 test=False,
                 generator_function: Callable=None #function type
                 ):
@@ -39,11 +38,10 @@ class RecommenderSystem:
         self.num_items = num_items
         self.sessions = sessions
         self.embedding_dim = embedding_dim
-        self.stddev = stddev
         self.test=test
         self.generator_function = generator_function
         if(test):
-            print("warring running in test mode")
+            print("Warning! Running in test mode")
             self.articles = generate_articles_with_titles(num_items)
         else:
             self.articles = setup_df_rs(self.num_items)
@@ -65,7 +63,7 @@ class RecommenderSystem:
     def sparse_mean_square_error(self, sparse_sessions : tf.Tensor , user_embeddings : tf.Tensor, article_embeddings : tf.Tensor):
         """
         Args:
-            sparse_sessions: A SparseTensor rating matrix, of dense_shape [N, M]
+            sparse_sessions: A SparseTensor session matrix, of dense_shape [N, M]
             user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
             dimension, such that U_i is the embedding of user i.
             article_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
@@ -82,7 +80,7 @@ class RecommenderSystem:
         return loss
         
     
-    def build_model(self):
+    def build_model(self, stddev :float =1.0):
         """
         Args:
             embedding_dim: the dimension of the embedding vectors.
@@ -92,8 +90,8 @@ class RecommenderSystem:
         """
         # SparseTensor representation of the train and test datasets.
         if(self.test):
-            sessions = self.generator_function(self.num_users, self.num_items) 
-            train_sessions, test_sessions = self.split_dataframe(sessions)
+            self.sessions = self.generator_function(self.num_users, self.num_items) 
+            train_sessions, test_sessions = self.split_dataframe(self.sessions)
             A_train = build_mock_sparse_tensor(train_sessions, "train", self.num_users, self.num_items)
             A_test = build_mock_sparse_tensor(test_sessions, "test", self.num_users, self.num_items)
         else:
@@ -103,10 +101,10 @@ class RecommenderSystem:
 
         user_embeddings = tf.Variable(
             tf.random_normal(
-                [self.num_users, self.embedding_dim], stddev=self.stddev))
+                [self.num_users, self.embedding_dim], stddev=stddev))
         article_embeddings = tf.Variable(
             tf.random_normal(
-                [self.num_items, self.embedding_dim], stddev=self.stddev))
+                [self.num_items, self.embedding_dim], stddev=stddev))
 
         train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
@@ -119,6 +117,55 @@ class RecommenderSystem:
             "article_id": article_embeddings
         }
         self.cf_model = CFModel(embeddings, train_loss, [metrics])
+
+    def build_regularized_model(self, regularization_coeff=.1, gravity_coeff=1., init_stddev=0.1):
+        """
+        Args:
+            ratings: the DataFrame of movie ratings.
+            embedding_dim: The dimension of the embedding space.
+            regularization_coeff: The regularization coefficient lambda.
+            gravity_coeff: The gravity regularization coefficient lambda_g.
+        Returns:
+            A CFModel object that uses a regularized loss.
+        """
+
+        if(self.test):
+            self.sessions = self.generator_function(self.num_users, self.num_items) 
+            train_sessions, test_sessions = self.split_dataframe(self.sessions)
+            A_train = build_mock_sparse_tensor(train_sessions, "train", self.num_users, self.num_items)
+            A_test = build_mock_sparse_tensor(test_sessions, "test", self.num_users, self.num_items)
+        else:
+            train_sessions, test_sessions = self.split_dataframe(self.sessions)
+            A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
+            A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
+
+        user_embeddings = tf.Variable(tf.random_normal(
+            [A_train.dense_shape[0], self.embedding_dim], stddev=init_stddev))
+        article_embeddings = tf.Variable(tf.random_normal(
+            [A_train.dense_shape[1], self.embedding_dim], stddev=init_stddev))
+
+        error_train = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
+        error_test = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
+        gravity_loss = gravity_coeff * gravity(user_embeddings, article_embeddings)
+        regularization_loss = regularization_coeff * (
+            tf.reduce_sum(user_embeddings*user_embeddings)/user_embeddings.shape[0].value + tf.reduce_sum(article_embeddings*article_embeddings)/article_embeddings.shape[0].value)
+        total_loss = error_train + regularization_loss + gravity_loss
+
+        losses = {
+            'train_error': error_train,
+            'test_error': error_test
+        }
+        loss_components = {
+            'observed_loss': error_train,
+            'regularization_loss': regularization_loss,
+            'gravity_loss': gravity_loss,
+        }
+        embeddings = {
+            "user_id": user_embeddings,
+            "article_id": article_embeddings
+        }
+
+        self.cf_model = CFModel(embeddings, total_loss, [losses, loss_components])
 
     def compute_scores(self, query_embedding, item_embeddings, measure=Measure.DOT):
         """Computes the scores of the candidates given a query.
@@ -140,6 +187,11 @@ class RecommenderSystem:
         return scores
     
     def user_recommendations(self, user_id : int, measure : Measure =Measure.DOT, exclude_rated: bool =False):
+        if self.test:
+            user_likes = self.sessions[self.sessions["user_id"] == user_id]
+            print("User likes: ")
+            print(user_likes)
+
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
         if should_recommend:
@@ -160,27 +212,6 @@ class RecommenderSystem:
             # Possibly do elastic stuff to just give some random recommendations
             return
         
-    def visualize_article_embeddings(self):
-        self.visualizer.visualize_tsne_article_embeddings(self.cf_model, self.articles)
-
-    '''def movie_neighbors(model, title_substring, measure=Measure.DOT, k=6):
-        # Search for movie ids that match the given substring.
-        ids =  movies[movies['title'].str.contains(title_substring)].index.values
-        titles = movies.iloc[ids]['title'].values
-        if len(titles) == 0:
-            raise ValueError("Found no movies with title %s" % title_substring)
-        print("Nearest neighbors of : %s." % titles[0])
-        if len(titles) > 1:
-            print("[Found more than one matching movie. Other candidates: {}]".format(
-                ", ".join(titles[1:])))
-        movie_id = ids[0]
-        scores = compute_scores(
-            model.embeddings["movie_id"][movie_id], model.embeddings["movie_id"],
-            measure)
-        score_key = measure + ' score'
-        df = pd.DataFrame({
-            score_key: list(scores),
-            'titles': movies['title'],
-            'genres': movies['all_genres']
-        })
-        display.display(df.sort_values([score_key], ascending=False).head(k))'''
+    def visualize_article_embeddings(self, marked_articles=[]):
+        #TODO Fix for test cases. Right now, the function crashes with low user/article count.
+        self.visualizer.visualize_tsne_article_embeddings(self.cf_model, self.articles, marked_articles)

@@ -29,3 +29,8 @@ def build_liked_sparse_tensor(liked_sessions_df, num_of_users, num_of_articles):
     '''
 
     return tensor
+
+def gravity(U, V):
+    """Creates a gravity loss given two embedding matrices."""
+    return 1. / (U.shape[0].value*V.shape[0].value) * tf.reduce_sum(
+        tf.matmul(U, U, transpose_a=True) * tf.matmul(V, V, transpose_a=True))
