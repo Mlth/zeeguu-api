@@ -47,7 +47,6 @@ def setup_session_2_categories(num_users,num_items) -> pd.DataFrame:
     '''
     users, sessions_data = __initial_session_setup(num_users)
     split = int(num_items/2)
-    print(split)
     for user_id in users['id']:
         if(user_id < int(num_users/2)):
             liked_articles = random.sample(range(0, split),3)
@@ -57,6 +56,31 @@ def setup_session_2_categories(num_users,num_items) -> pd.DataFrame:
             liked_articles = random.sample(range(split, num_items),3)
             for article_id in liked_articles:
                 sessions_data.append({'user_id': user_id, 'article_id': article_id, 'expected_read': 1.0})
+    sessions = pd.DataFrame(sessions_data)
+    return sessions
+
+def setup_sessions_4_categories_with_noise(num_users, num_items) -> pd.DataFrame:
+    '''
+    This function mocks a session where everyone likes articles within four different categories
+    and some random spread 
+    '''
+    r = range(1,5)
+    categories = 4 
+    articlesplit = int(num_items/categories)
+    m_max = 0
+    m_less = 0
+    users, sessions_data = __initial_session_setup(num_users)
+    for n in r: 
+        for user_id in users['id']:
+            m_max= int(num_users/categories*n)
+            if(user_id >= m_less and user_id < m_max):
+                if(random.random() > 0.8):
+                    liked_article_noise = random.sample(range(0, num_items),1)
+                    sessions_data.append({'user_id': user_id, 'article_id': liked_article_noise[0], 'expected_read': 1.0})
+                liked_articles = random.sample(range(articlesplit*n-articlesplit, articlesplit*n),random.randint(1,5))
+                for article_id in liked_articles:
+                    sessions_data.append({'user_id': user_id, 'article_id': article_id, 'expected_read': 1.0}) 
+        m_less = m_max
     sessions = pd.DataFrame(sessions_data)
     return sessions
 
