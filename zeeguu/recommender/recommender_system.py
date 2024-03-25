@@ -80,7 +80,7 @@ class RecommenderSystem:
         return loss
         
     
-    def build_model(self, stddev :float =1.0):
+    def build_model(self, stddev=1.0):
         """
         Args:
             embedding_dim: the dimension of the embedding vectors.
@@ -186,7 +186,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id : int, measure : Measure =Measure.DOT, exclude_rated: bool =False):
+    def user_recommendations(self, user_id : int, measure=Measure.DOT, exclude_read: bool =False): #, k=10):
         if self.test:
             user_likes = self.sessions[self.sessions["user_id"] == user_id]
             print("User likes: ")
@@ -203,7 +203,7 @@ class RecommenderSystem:
                 'article_id': self.articles['id'],
                 'titles': self.articles['title'],
             }).dropna(subset=["titles"])
-            if exclude_rated:
+            if exclude_read:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values
                 df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
@@ -212,6 +212,18 @@ class RecommenderSystem:
             # Possibly do elastic stuff to just give some random recommendations
             return
         
+    def article_neighbors(self, article_id, measure=Measure.DOT, k=10):
+        scores = self.compute_scores(
+            self.cf_model.embeddings["article_id"][article_id], self.cf_model.embeddings["article_id"],
+            measure)
+        score_key = str(measure) + ' score'
+        df = pd.DataFrame({
+            score_key: list(scores),
+            'article_id': self.articles['id'],
+            'titles': self.articles['title'],
+        })
+        display.display(df.sort_values([score_key], ascending=False).head(k))
+
     def visualize_article_embeddings(self, marked_articles=[]):
         #TODO Fix for test cases. Right now, the function crashes with low user/article count.
         self.visualizer.visualize_tsne_article_embeddings(self.cf_model, self.articles, marked_articles)
