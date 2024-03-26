@@ -38,7 +38,7 @@ recommender.build_regularized_model()
 recommender.cf_model.train(num_iterations=50000, learning_rate=0.25)
 
 if(test):
-    recommender.user_recommendations(1, exclude_read=True)
+    recommender.user_recommendations(1)
 else:
     recommender.user_recommendations(4338)
 

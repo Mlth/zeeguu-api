@@ -1,7 +1,7 @@
 from enum import Enum
 import numpy as np
 from zeeguu.recommender.cf_model import CFModel
-from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor, gravity
+from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
 from zeeguu.recommender.utils import setup_df_rs
 import pandas as pd
 from typing import Callable
@@ -148,7 +148,9 @@ class RecommenderSystem:
         error_test = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
         gravity_loss = gravity_coeff * gravity(user_embeddings, article_embeddings)
         regularization_loss = regularization_coeff * (
-            tf.reduce_sum(user_embeddings*user_embeddings)/user_embeddings.shape[0].value + tf.reduce_sum(article_embeddings*article_embeddings)/article_embeddings.shape[0].value)
+            # The Colab notebook just summed the values of each embedding vector. Normally, the norm of a vector is calculated using the formula for Euclidian norm.
+            # tf.reduce_sum(user_embeddings * user_embeddings) / user_embeddings.shape[0].value + tf.reduce_sum(article_embeddings * article_embeddings) / article_embeddings.shape[0].value)
+            tf.norm(user_embeddings*user_embeddings)/user_embeddings.shape[0].value + tf.norm(article_embeddings*article_embeddings)/article_embeddings.shape[0].value)
         total_loss = error_train + regularization_loss + gravity_loss
 
         losses = {
@@ -225,5 +227,10 @@ class RecommenderSystem:
         display.display(df.sort_values([score_key], ascending=False).head(k))
 
     def visualize_article_embeddings(self, marked_articles=[]):
-        #TODO Fix for test cases. Right now, the function crashes with low user/article count.
+        #TODO Fix for small test cases. Right now, the function crashes with low user/article count.
         self.visualizer.visualize_tsne_article_embeddings(self.cf_model, self.articles, marked_articles)
+
+def gravity(U, V):
+    """Creates a gravity loss given two embedding matrices."""
+    return 1. / (U.shape[0].value*V.shape[0].value) * tf.reduce_sum(
+        tf.matmul(U, U, transpose_a=True) * tf.matmul(V, V, transpose_a=True))
