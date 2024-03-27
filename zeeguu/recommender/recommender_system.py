@@ -2,19 +2,19 @@ from enum import Enum
 import numpy as np
 from zeeguu.recommender.cf_model import CFModel
 from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils import setup_df_rs
+from zeeguu.recommender.utils import filter_article_embeddings, get_recommendable_articles, setup_df_rs
 import pandas as pd
 from typing import Callable
 from IPython import display
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
 from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
+from tensorflow.python.keras import layers
 import tensorflow as tf
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 @tf.function(experimental_follow_type_hints=True)
-
 
 class Measure(Enum):
     # If no ShowData is chosen, all data will be retrieved and shown.
@@ -25,14 +25,15 @@ class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
 
-    def __init__(self,
-                sessions : pd.DataFrame,
-                num_users: int,
-                num_items: int,
-                embedding_dim : int =20,
-                test=False,
-                generator_function: Callable=None #function type
-                ):
+    def __init__(
+        self,
+        sessions : pd.DataFrame,
+        num_users: int,
+        num_items: int,
+        embedding_dim : int =20,
+        test=False,
+        generator_function: Callable=None #function type
+    ):
         self.num_users = num_users
         self.num_items = num_items
         self.sessions = sessions
@@ -43,7 +44,7 @@ class RecommenderSystem:
             print("Warning! Running in test mode")
             self.articles = generate_articles_with_titles(num_items)
         else:
-            self.articles = setup_df_rs(self.num_items)
+            self.articles = get_recommendable_articles()
 
     def split_dataframe(self, df: pd.DataFrame, holdout_fraction : float =0.1):
         """Splits a DataFrame into training and test sets.
@@ -59,7 +60,7 @@ class RecommenderSystem:
         return train, test
 
 
-    def sparse_mean_square_error(self, sparse_sessions : tf.Tensor , user_embeddings : tf.Tensor, article_embeddings : tf.Tensor):
+    def sparse_mean_square_error(self, sparse_sessions , user_embeddings, article_embeddings):
         """
         Args:
             sparse_sessions: A SparseTensor session matrix, of dense_shape [N, M]
@@ -188,22 +189,21 @@ class RecommenderSystem:
         return scores
     
     def user_recommendations(self, user_id : int, measure=Measure.DOT, exclude_read: bool =False): #, k=10):
-        if self.test:
-            user_likes = self.sessions[self.sessions["user_id"] == user_id]
-            print("User likes: ")
-            print(user_likes)
+        user_likes = self.sessions[self.sessions["user_id"] == user_id]
+        print(f"User likes: {user_likes}")
 
-        # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
+        # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?fe
         should_recommend = True
         if should_recommend:
+            valid_article_embeddings = filter_article_embeddings(self.cf_model.embeddings["article_id"], self.articles['id'])
             scores = self.compute_scores(
-                self.cf_model.embeddings["user_id"][user_id], self.cf_model.embeddings["article_id"], measure)
+                self.cf_model.embeddings["user_id"][user_id], valid_article_embeddings, measure)
             score_key = str(measure) + ' score'
             df = pd.DataFrame({
                 score_key: list(scores),
                 'article_id': self.articles['id'],
-                'titles': self.articles['title'],
-            }).dropna(subset=["titles"])
+                #'titles': self.articles['title'],
+            })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem object.
             if exclude_read:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values

@@ -1,7 +1,7 @@
 import altair as alt
 import sklearn
 import sklearn.manifold
-from zeeguu.recommender.utils import get_resource_path
+from zeeguu.recommender.utils import filter_article_embeddings, get_resource_path
 from typing import List
 
 class ModelVisualizer:
@@ -36,7 +36,8 @@ class ModelVisualizer:
             init='pca', verbose=True, n_iter=400)
 
         print('Running t-SNE...')
-        V_proj = tsne.fit_transform(model.embeddings["article_id"])
+        filtered_embeddings = filter_article_embeddings(model.embeddings["article_id"], articles['id'])
+        V_proj = tsne.fit_transform(filtered_embeddings)
         articles.loc[:,'x'] = V_proj[:, 0]
         articles.loc[:,'y'] = V_proj[:, 1]
         return articles

@@ -11,7 +11,14 @@ from zeeguu.core.model.article import Article
 import pandas as pd
 from zeeguu.core.model import db
 
+def import_tf():
+    import tensorflow as tf
+    tf = tf.compat.v1
+    tf.disable_v2_behavior()
+    tf.logging.set_verbosity(tf.logging.ERROR)
+    return tf
 
+tf = import_tf()
 
 resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
@@ -146,3 +153,28 @@ def setup_df_rs(num_items : int) -> pd.DataFrame:
     all_null_df.fillna(0, inplace=True)
     articles = pd.merge(all_null_df, articles, on='id', how='left', validate="many_to_many")
     return articles
+
+def get_recommendable_articles(lowest_id=None) -> pd.DataFrame:
+    '''Fetches all the valid articles that a user can be recommended'''
+    query = f"""
+        Select distinct a.id, a.title
+        from article a
+        join user_article ua on a.id = ua.article_id
+        where broken = 0 and ua.opened > {accurate_duration_date.timestamp()}
+    """
+    #FIX: Change accurate_duration_date to be a parameter or delete it
+    if lowest_id:
+        query += f" and id > {lowest_id}"
+    articles = pd.read_sql_query(query, db.engine)
+    return articles
+
+def filter_article_embeddings(embeddings, article_ids):
+    '''Filters the article embeddings to only include the articles that are in the articles dataframe'''
+    '''with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        
+        embeddings_result = tf.nn.embedding_lookup(embeddings, [5])
+        
+        embeddings_array = embeddings_result.eval()'''
+        
+    return embeddings[(article_ids - 1)]
