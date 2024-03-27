@@ -11,6 +11,12 @@ from zeeguu.core.model.article import Article
 import pandas as pd
 from zeeguu.core.model import db
 
+from zeeguu.core.model import db
+import sqlalchemy as database
+from sqlalchemy.orm import sessionmaker
+
+import zeeguu.core
+
 
 
 resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
@@ -183,7 +189,7 @@ def get_all_user_language_levels():
         UserLanguage.query
             .filter(UserLanguage.cefr_level.isnot(None))
     )
-    for row in query[:2]:
+    for row in query:
         if (row.user_id, row.language_id) not in user_level_dict:
             user_level_dict[(row.user_id, row.language_id)] = { 'cefr_level': row.cefr_level }
         else:
@@ -207,12 +213,20 @@ def get_difficulty_adjustment(session, weight, user_level_query):
             .first()
     ) """
     
-    if user_level_query is None or user_level_query[0] == 0 or user_level_query[0] is None or user_level_query[0] == [] or user_level_query == []:
+    if user_level_query is None:
         return session.session_duration
     user_level = user_level_query
     difficulty = session.difficulty
     fk_difficulty = cefr_to_fk_difficulty(difficulty)
     return session.session_duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
+
+def get_difficulty_adjustment_opti(difficulty, duration, weight, user_level_query):
+    
+    if user_level_query is None:
+        return duration
+    user_level = user_level_query
+    fk_difficulty = cefr_to_fk_difficulty(difficulty)
+    return duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
 
 def setup_df_rs(num_items : int) -> pd.DataFrame:
     '''fetches all articles and fills out the space between them
@@ -223,3 +237,56 @@ def setup_df_rs(num_items : int) -> pd.DataFrame:
     all_null_df.fillna(0, inplace=True)
     articles = pd.merge(all_null_df, articles, on='id', how='left', validate="many_to_many")
     return articles
+
+def setup_df_correct(num_items : int) -> pd.DataFrame:
+    
+    article_query ="SELECT id, title FROM article ORDER BY id ASC"
+    article_list = pd.read_sql(article_query, db.engine)
+
+    all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
+    articles = pd.merge(all_null_df, article_list, on='id', how='left', validate="many_to_many")
+    articles = articles.dropna(subset=['title'])
+    print("printing articles")
+    print(articles)
+    print(len(articles))
+
+    return article_list
+
+def get_dataframe_user_reading_sessions(data_since: datetime):
+    DB_URI = zeeguu.core.app.config["SQLALCHEMY_DATABASE_URI"]
+    engine = database.create_engine(DB_URI)
+    date_since = data_since.strftime('%Y-%m-%d')
+
+    print(date_since)
+
+    user_reading_query = f"""
+        SELECT urs.user_id, urs.article_id, urs.start_time, urs.duration, a.*, ua.liked
+        FROM user_reading_session AS urs 
+        JOIN user AS u ON u.id = urs.user_id 
+        JOIN article AS a ON a.id = urs.article_id 
+        LEFT JOIN user_article as ua on ua.user_id = urs.user_id and ua.article_id = urs.article_id
+        WHERE a.broken = 0 
+        AND u.is_dev = FALSE 
+        AND urs.article_id IS NOT NULL 
+        AND urs.start_time >= '2023-03-26'
+        AND urs.duration >= 30000 
+        AND urs.duration <= 3600000 
+        ORDER BY urs.user_id ASC
+    """
+
+    df = pd.read_sql(user_reading_query, engine)
+
+    aggregated_df = df.groupby(['user_id', 'article_id']).agg({'duration': 'sum'}).reset_index()
+    merged_df = pd.merge(aggregated_df, df.drop(columns=['duration']), on=['user_id', 'article_id'], how='left')
+    merged_df = merged_df.drop_duplicates(subset=['user_id', 'article_id'], keep='first').reset_index()
+    return merged_df
+
+
+
+
+
+
+
+
+
+

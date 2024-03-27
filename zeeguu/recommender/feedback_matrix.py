@@ -148,7 +148,7 @@ class FeedbackMatrix:
 
 
             if (sessions[session].user_id, sessions[session].language_id) in user_language_levels:
-                sessions[session].session_duration = get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight, user_language_levels[sessions[session].user_id, sessions[session].language_id])
+                sessions[session].session_duration = get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight, user_language_levels[(sessions[session].user_id, sessions[session].language_id)]['cefr_level'])
 
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
