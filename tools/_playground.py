@@ -1,4 +1,3 @@
-import sys
 import time
 from elasticsearch import Elasticsearch
 import zeeguu
@@ -7,41 +6,16 @@ from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Art
 import pandas as pd
 from zeeguu.core.model import db
 import sqlalchemy as database
-import pyarrow as pa # needed for pandas
 from zeeguu.api.app import create_app
-from zeeguu.recommender.candidate_generator import build_candidate_pool_for_lang, build_candidate_pool_for_user, initial_candidate_pool
-from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig, ShowData
-from zeeguu.core.elastic.elastic_query_builder import build_elastic_search_query as ElasticQuery
-from zeeguu.core.elastic.indexing import index_all_articles
-from datetime import datetime, timedelta
+from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
 from zeeguu.recommender.opti_feedback_matrix import OptiAdjustmentConfig, OptiFeedbackMatrix, OptiFeedbackMatrixConfig
 from zeeguu.recommender.utils import accurate_duration_date, get_dataframe_user_reading_sessions, setup_df_correct
 
-
-import tensorflow as tf
+from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories
 from zeeguu.recommender.recommender_system import RecommenderSystem
-
-from zeeguu.recommender.recommender_system import RecommenderSystem
-tf = tf.compat.v1
-tf.disable_v2_behavior()
-tf.logging.set_verbosity(tf.logging.ERROR)
-
-pd.options.display.max_rows = 10
-pd.options.display.float_format = '{:.3f}'.format
-def mask(df, key, function):
-  """Returns a filtered dataframe, by applying function to key"""
-  return df[function(df[key])]
-
-def flatten_cols(df):
-  df.columns = [' '.join(col).strip() for col in df.columns.values]
-  return df
-
-pd.DataFrame.mask = mask
-pd.DataFrame.flatten_cols = flatten_cols
 
 app = create_app()
 app.app_context().push()
-
 print("Starting playground")
 sesh = db.session
 initial_candidate_pool()
@@ -125,25 +99,21 @@ print("--- %s seconds ---" % (time.time() - start_time))
 
 
 if test:
-    recommender = RecommenderSystem(sessions_df, 100, 100, test=True)
+    recommender = RecommenderSystem(sessions_df, 500, 500, test=True, generator_function=setup_session_2_categories)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
-start_time = time.time()
+recommender.build_regularized_model()
 
-recommender.build_model()
-
-recommender.cf_model.train()
+recommender.cf_model.train(num_iterations=50000, learning_rate=0.15)
 
 if(test):
-   recommender.user_recommendations(2)
+    recommender.user_recommendations(1)
 else:
-  recommender.user_recommendations(4338)
-   
+    recommender.user_recommendations(4338)
 
-#recommender.visualize_article_embeddings()
-
-#print("--- %s seconds ---" % (time.time() - start_time))
-
+if test:
+    user_liked_articles = list(recommender.sessions[recommender.sessions['user_id'] == 1]['article_id'])
+    recommender.visualize_article_embeddings(marked_articles=user_liked_articles)
 
 print("Ending playground")

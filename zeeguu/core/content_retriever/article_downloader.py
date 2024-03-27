@@ -25,7 +25,8 @@ from sentry_sdk import capture_exception as capture_to_sentry
 from zeeguu.core.elastic.indexing import index_in_elasticsearch
 
 from zeeguu.core.content_retriever import download_and_parse
-from zeeguu.core.content_retriever.parse_with_readability_server import TIMEOUT_SECONDS
+
+TIMEOUT_SECONDS = 10
 
 import zeeguu
 
@@ -37,6 +38,11 @@ class SkippedForTooOld(Exception):
 
 
 class SkippedForLowQuality(Exception):
+    def __init__(self, reason):
+        self.reason = reason
+
+
+class FailedToParseWithReadabiiltyServer(Exception):
     def __init__(self, reason):
         self.reason = reason
 
@@ -170,14 +176,14 @@ def download_from_feed(feed: Feed, session, limit=1000, save_in_elastic=True):
             skipped_already_in_db += 1
             logp(" - Already in DB")
             continue
+        except FailedToParseWithReadabiiltyServer as e:
+            logp(f" - failed to parse with readability server (server said: {e})")
+            continue
 
         except Exception as e:
             import traceback
-
             traceback.print_stack()
-
             capture_to_sentry(e)
-
             if hasattr(e, "message"):
                 logp(e.message)
             else:
@@ -212,9 +218,9 @@ def download_feed_item(session, feed, feed_item, url):
 
     try:
 
-        parsed = download_and_parse(url)
+        np_article = download_and_parse(url)
 
-        is_quality_article, reason = sufficient_quality(parsed)
+        is_quality_article, reason = sufficient_quality(np_article)
 
         if not is_quality_article:
             raise SkippedForLowQuality(reason)
@@ -232,53 +238,41 @@ def download_feed_item(session, feed, feed_item, url):
         # and if there is still no summary, we simply use the beginning of
         # the article
         if len(summary) < 10:
-            summary = parsed.text[:MAX_CHAR_COUNT_IN_SUMMARY]
+            summary = np_article.text[:MAX_CHAR_COUNT_IN_SUMMARY]
 
-            # Create new article and save it to DB
+        # Create new article and save it to DB
         new_article = zeeguu.core.model.Article(
             Url.find_or_create(session, url),
             title,
-            ", ".join(parsed.authors),
-            parsed.text,
+            ", ".join(np_article.authors),
+            np_article.text,
             summary,
             published_datetime,
             feed,
             feed.language,
+            htmlContent=np_article.htmlContent
         )
+        if np_article.top_image != "":
+            new_article.img_url = Url.find_or_create(session, np_article.top_image)
         session.add(new_article)
 
         topics = add_topics(new_article, session)
         logp(f" Topics ({topics})")
 
-        # compute extra difficulties for french articles
-        try:
-            if new_article.language.code == "fr":
-                from zeeguu.core.language.services.lingo_rank_service import (
-                    retrieve_lingo_rank,
-                )
-
-                df = DifficultyLingoRank(
-                    new_article, retrieve_lingo_rank(new_article.content)
-                )
-                session.add(df)
-        except Exception as e:
-            capture_to_sentry(e)
-
-        session.commit()
-        logp(f"SUCCESS for: {new_article.title}")
-
     except SkippedForLowQuality as e:
         raise e
 
     except newspaper.ArticleException as e:
-        logp(f"can't download article at: {url}")
+        logp(f"Newspaper can't download article at: {url}")
 
     except DataError as e:
         logp(f"Data error for: {url}")
 
     except requests.exceptions.Timeout:
-        logp(f"The request from the server was timed out after {TIMEOUT_SECONDS} seconds.")
-        
+        logp(
+            f"The request from the server was timed out after {TIMEOUT_SECONDS} seconds."
+        )
+
     except Exception as e:
         import traceback
 

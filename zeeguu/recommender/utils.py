@@ -1,4 +1,5 @@
 from datetime import datetime
+from operator import or_
 import os
 from enum import Enum, auto
 from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
@@ -92,7 +93,7 @@ def days_since_normalizer(days_since):
             return 0.5
         return 0.25
 
-def add_filters_to_query(query, show_data: list[ShowData]):
+def add_filters_to_query(query, show_data: 'list[ShowData]'):
     or_filters = []
     if ShowData.LIKED in show_data:
         query = (
@@ -109,7 +110,7 @@ def add_filters_to_query(query, show_data: list[ShowData]):
     return query
 
 
-def get_user_reading_sessions(data_since: datetime, show_data: list[ShowData] = []):
+def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' = []):
     print("Getting all user reading sessions")
     liked_dict = {}
     feedback_dict = {}
