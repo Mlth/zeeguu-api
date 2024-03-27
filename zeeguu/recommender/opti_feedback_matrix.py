@@ -79,7 +79,7 @@ class OptiFeedbackMatrix:
 
             
             if self.duration_is_within_bounds(user_reading_df.at[index, 'duration'], should_spend_reading_lower_bound, should_spend_reading_upper_bound):
-                print("Inside the function")
+                #print("Inside the function")
                 self.have_read_sessions += 1
                 #self.liked_sessions_df = self.liked_sessions_df.append(row, ignore_index=True)
         

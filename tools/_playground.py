@@ -7,10 +7,11 @@ import pandas as pd
 from zeeguu.core.model import db
 import sqlalchemy as database
 from zeeguu.api.app import create_app
+from zeeguu.recommender.candidate_generator import initial_candidate_pool
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
 from zeeguu.recommender.opti_feedback_matrix import OptiAdjustmentConfig, OptiFeedbackMatrix, OptiFeedbackMatrixConfig
-from zeeguu.recommender.utils import accurate_duration_date, get_dataframe_user_reading_sessions, setup_df_correct
-
+from zeeguu.recommender.utils import accurate_duration_date, get_dataframe_user_reading_sessions, setup_df_correct, ShowData
+from datetime import timedelta, datetime
 from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories
 from zeeguu.recommender.recommender_system import RecommenderSystem
 
@@ -21,7 +22,7 @@ sesh = db.session
 initial_candidate_pool()
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
-test = False
+test = True
 
 start_time = time.time()
 print("setting up config")
@@ -43,13 +44,13 @@ sessions_df = matrix.liked_sessions_df
 
 #setup_df_correct(matrix.max_article_id)
 
-print("Querying sessions df")
+""" print("Querying sessions df")
 print(len(matrix.sessions_df))
 
 print("Querying liked sessions df")
 print(len(sessions_df))
 print(sessions_df.columns)
-print(sessions_df)
+print(sessions_df) """
 
 #matrix.plot_sessions_df("difficulty-parameter")
 
@@ -96,6 +97,8 @@ print(opti_matrix.have_read_sessions) """
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
+#path = "./zeeguu/recommender/embeddings/"
+#recommender.save_embeddings(path)
 
 
 if test:
