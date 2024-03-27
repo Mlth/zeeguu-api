@@ -3,6 +3,7 @@ from operator import or_
 import os
 from enum import Enum, auto
 from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
+from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
 from zeeguu.core.model.user_language import UserLanguage
 from zeeguu.core.model.user_reading_session import UserReadingSession
@@ -11,12 +12,19 @@ from zeeguu.core.model.article import Article
 import pandas as pd
 from zeeguu.core.model import db
 
+from zeeguu.core.model import db
+import sqlalchemy as database
+from sqlalchemy.orm import sessionmaker
+
+import zeeguu.core
+
 
 
 resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 average_reading_speed = 70
 upper_bound_reading_speed = 45
 lower_bound_reading_speed = -35
+user_level_dict = None
 
 accurate_duration_date = datetime(day=30, month=1, year=2024)
 
@@ -104,6 +112,8 @@ def add_filters_to_query(query, show_data: 'list[ShowData]'):
 
 def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' = []):
     print("Getting all user reading sessions")
+    liked_dict = {}
+    feedback_dict = {}
     query = (
         UserReadingSession.query
             .join(User, User.id == UserReadingSession.user_id)
@@ -117,25 +127,107 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
     )
     if data_since:
         query = query.filter(UserReadingSession.start_time >= data_since)
+
+    if ShowData.LIKED in show_data:
+        liked_dict = get_all_user_article_information(data_since)
+    if ShowData.RATED_DIFFICULTY in show_data:
+        feedback_dict = get_all_article_difficulty_feedback(data_since)
+
     
-    return add_filters_to_query(query, show_data).all()
+    return query, liked_dict, feedback_dict 
+
+def get_sum_of_translation_from_user_activity_data(data_since: datetime):
+    count_dict = {}
+    query = (
+        UserActivityData.query
+            .filter(UserActivityData.event.like('%TRANSLATE TEXT%'))
+            .filter(UserActivityData.time >= data_since)
+    )
+    for row in query:
+        if (row.user_id, row.article_id) not in count_dict:
+            count_dict[(row.user_id, row.article_id)] = {
+                'count': 1,
+            }
+        else:
+            count_dict[(row.user_id, row.article_id)]['count'] += 1
+    
+    return count_dict
+
+def get_all_user_article_information(data_since: datetime):
+
+    liked_dict = {}
+    query = (
+        UserArticle.query
+            .filter(UserArticle.opened.isnot(None))
+            .filter(UserArticle.opened >= data_since)
+    )
+    for row in query:
+        if (row.user_id, row.article_id) not in liked_dict:
+            liked_dict[(row.user_id, row.article_id)] = { 'liked': int(row.liked) }
+        else:
+            liked_dict[(row.user_id, row.article_id)]['liked'] = row.liked
+
+    return liked_dict
+
+def get_all_article_difficulty_feedback(data_since: datetime):
+    feedback_dict = {}
+    query = (
+        ArticleDifficultyFeedback.query
+            .filter(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
+            .filter(ArticleDifficultyFeedback.date >= data_since)
+    )
+    for row in query:
+        if (row.user_id, row.article_id) not in feedback_dict:
+            feedback_dict[(row.user_id, row.article_id)] = { 'difficulty_feedback': row.difficulty_feedback }
+        else:
+            feedback_dict[(row.user_id, row.article_id)]['difficulty_feedback'] = row.difficulty_feedback
+
+    return feedback_dict
+
+def get_all_user_language_levels():
+    user_level_dict = {}
+    query = (
+        UserLanguage.query
+            .filter(UserLanguage.cefr_level.isnot(None))
+    )
+    for row in query:
+        if (row.user_id, row.language_id) not in user_level_dict:
+            user_level_dict[(row.user_id, row.language_id)] = { 'cefr_level': row.cefr_level }
+        else:
+            user_level_dict[(row.user_id, row.language_id)]['cefr_level'] = row.cefr_level
+    
+    """ for row in user_level_dict:
+        print(row)
+        print(user_level_dict[row]) """
+
+    return user_level_dict  
 
 
-def get_difficulty_adjustment(session, weight):
-    user_level_query = (
+def get_difficulty_adjustment(session, weight, user_level_query):
+    
+
+    """ user_level_query = (
         UserLanguage.query
             .filter_by(user_id = session.user_id, language_id=session.language_id)
             .filter(UserLanguage.cefr_level.isnot(None))
             .with_entities(UserLanguage.cefr_level)
             .first()
-    )
+    ) """
     
-    if user_level_query is None or user_level_query[0] == 0 or user_level_query[0] is None or user_level_query[0] == [] or user_level_query == []:
+    if user_level_query is None:
         return session.session_duration
-    user_level = user_level_query[0]
+    user_level = user_level_query
     difficulty = session.difficulty
     fk_difficulty = cefr_to_fk_difficulty(difficulty)
     return session.session_duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
+
+def get_difficulty_adjustment_opti(difficulty, duration, weight, user_level_query):
+    
+    if user_level_query is None:
+        return duration
+    user_level = user_level_query
+    fk_difficulty = cefr_to_fk_difficulty(difficulty)
+    return duration * get_diff_in_article_and_user_level(fk_difficulty, user_level, weight)
 
 def setup_df_rs(num_items : int) -> pd.DataFrame:
     '''fetches all articles and fills out the space between them
@@ -146,3 +238,56 @@ def setup_df_rs(num_items : int) -> pd.DataFrame:
     all_null_df.fillna(0, inplace=True)
     articles = pd.merge(all_null_df, articles, on='id', how='left', validate="many_to_many")
     return articles
+
+def setup_df_correct(num_items : int) -> pd.DataFrame:
+    
+    article_query ="SELECT id, title FROM article ORDER BY id ASC"
+    article_list = pd.read_sql(article_query, db.engine)
+
+    all_null_df = pd.DataFrame({'id': range(1, num_items+1)})
+    articles = pd.merge(all_null_df, article_list, on='id', how='left', validate="many_to_many")
+    articles = articles.dropna(subset=['title'])
+    print("printing articles")
+    print(articles)
+    print(len(articles))
+
+    return article_list
+
+def get_dataframe_user_reading_sessions(data_since: datetime):
+    DB_URI = zeeguu.core.app.config["SQLALCHEMY_DATABASE_URI"]
+    engine = database.create_engine(DB_URI)
+    date_since = data_since.strftime('%Y-%m-%d')
+
+    print(date_since)
+
+    user_reading_query = f"""
+        SELECT urs.user_id, urs.article_id, urs.start_time, urs.duration, a.*, ua.liked
+        FROM user_reading_session AS urs 
+        JOIN user AS u ON u.id = urs.user_id 
+        JOIN article AS a ON a.id = urs.article_id 
+        LEFT JOIN user_article as ua on ua.user_id = urs.user_id and ua.article_id = urs.article_id
+        WHERE a.broken = 0 
+        AND u.is_dev = FALSE 
+        AND urs.article_id IS NOT NULL 
+        AND urs.start_time >= '2023-03-26'
+        AND urs.duration >= 30000 
+        AND urs.duration <= 3600000 
+        ORDER BY urs.user_id ASC
+    """
+
+    df = pd.read_sql(user_reading_query, engine)
+
+    aggregated_df = df.groupby(['user_id', 'article_id']).agg({'duration': 'sum'}).reset_index()
+    merged_df = pd.merge(aggregated_df, df.drop(columns=['duration']), on=['user_id', 'article_id'], how='left')
+    merged_df = merged_df.drop_duplicates(subset=['user_id', 'article_id'], keep='first').reset_index()
+    return merged_df
+
+
+
+
+
+
+
+
+
+
