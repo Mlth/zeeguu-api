@@ -84,13 +84,11 @@ class FeedbackMatrix:
             article = session.article
             session_duration = int(session.duration) / 1000 # in seconds
             if (user_id, article_id) in liked_data:
-                liked = liked_data[(user_id, article_id)]['liked']
+                liked_value = liked_data[(user_id, article_id)]['liked']
             else:
-                liked = 0
+                liked_value = 0
             #liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
-            if liked == (False,) or liked is None:
-                liked_value = 0 
-            else: liked_value = 1
+            
             #difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
             if (user_id, article_id) in difficulty_feedback_data:
                 difficulty_feedback = difficulty_feedback_data[(user_id, article_id)]['difficulty_feedback']
@@ -144,7 +142,7 @@ class FeedbackMatrix:
         for session in sessions.keys():
             #sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
             if (sessions[session].user_id, sessions[session].article_id) in translate_data:
-                sessions[session].session_duration = translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
+                sessions[session].session_duration -= translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
 
 
             if (sessions[session].user_id, sessions[session].language_id) in user_language_levels:
