@@ -76,7 +76,8 @@ def setup_sessions_4_categories_with_noise(num_users, num_items) -> pd.DataFrame
             if(user_id >= m_less and user_id < m_max):
                 if(random.random() > 0.8):
                     liked_article_noise = random.sample(range(0, num_items),1)
-                    sessions_data.append({'user_id': user_id, 'article_id': liked_article_noise[0], 'expected_read': 1.0})
+                    if(liked_article_noise[0] not in range(articlesplit*n-articlesplit, articlesplit*n)):
+                        sessions_data.append({'user_id': user_id, 'article_id': liked_article_noise[0], 'expected_read': 1.0})
                 liked_articles = random.sample(range(articlesplit*n-articlesplit, articlesplit*n),random.randint(1,5))
                 for article_id in liked_articles:
                     sessions_data.append({'user_id': user_id, 'article_id': article_id, 'expected_read': 1.0}) 
