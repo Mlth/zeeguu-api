@@ -177,4 +177,4 @@ def filter_article_embeddings(embeddings, article_ids):
         
         embeddings_array = embeddings_result.eval()'''
         
-    return embeddings[(article_ids - 1)]
+    return embeddings[article_ids]

@@ -190,7 +190,7 @@ class RecommenderSystem:
     
     def user_recommendations(self, user_id : int, measure=Measure.DOT, exclude_read: bool =False): #, k=10):
         user_likes = self.sessions[self.sessions["user_id"] == user_id]
-        print(f"User likes: {user_likes}")
+        print(f"User likes: {user_likes['article_id']}")
 
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?fe
         should_recommend = True
@@ -203,7 +203,7 @@ class RecommenderSystem:
                 score_key: list(scores),
                 'article_id': self.articles['id'],
                 #'titles': self.articles['title'],
-            })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem object.
+            })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
             if exclude_read:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values

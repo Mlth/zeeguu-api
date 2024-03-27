@@ -6,7 +6,7 @@ from zeeguu.recommender.utils import accurate_duration_date, get_resource_path
 from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories, setup_sessions_4_categories_with_noise
 from zeeguu.recommender.recommender_system import Measure, RecommenderSystem
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = create_app()
 app.app_context().push()
@@ -16,7 +16,7 @@ test = False #enable this if you want constructed examples for debugging the rec
 
 matrix_config = FeedbackMatrixConfig(
         show_data=[],
-        data_since=datetime.now() - datetime.timedelta(days=365),
+        data_since=datetime.now() - timedelta(days=365),
         adjustment_config=AdjustmentConfig(
             difficulty_weight=5,
             translation_adjustment_value=1
@@ -29,9 +29,15 @@ matrix.generate_dfs()
 
 sessions_df = matrix.liked_sessions_df
 
-print(len(sessions_df))
+matrix.plot_sessions_df("test")
 
-'''if test:
+print('likes')
+print(len(sessions_df))
+print('sessions')
+print(len(matrix.sessions_df))
+
+'''
+if test:
     recommender = RecommenderSystem(sessions_df, 500, 500, test=True, generator_function=setup_sessions_4_categories_with_noise)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
@@ -40,12 +46,11 @@ recommender.build_regularized_model()
 
 recommender.cf_model.train(num_iterations=500, learning_rate=0.25)
 
-
 if(test):
     recommender.user_recommendations(1)
 else:
-    recommender.user_recommendations(4338)'''
-
+    recommender.user_recommendations(4338)
+'''
 
 #recommender.sessions.to_csv(get_resource_path() + 'sessions.csv', index=False)
 #recommender.article_neighbors(article_id=30)
