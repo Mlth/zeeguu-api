@@ -32,7 +32,12 @@ USE zeeguu_test
 
 source zeeguu-anonymized-24-03-01.sql
 
+**Migrations**
+docker cp <name_of_migration> zeeguu-mysql:<name_of_migration>
+mysql -u zeeguu_test -p zeeguu_test < /<name_of_migration>
+
 ### 4.
+
 
 Run this to run the server
 
