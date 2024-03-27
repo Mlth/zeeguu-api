@@ -9,12 +9,11 @@ from IPython import display
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
 from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
-import tensorflow as tfi
-tf = tfi.compat.v1
+import tensorflow as tf
+tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 @tf.function(experimental_follow_type_hints=True)
-
 
 
 class Measure(Enum):
