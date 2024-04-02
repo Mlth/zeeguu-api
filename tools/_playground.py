@@ -8,7 +8,7 @@ from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix,
 from zeeguu.recommender.opti_feedback_matrix import OptiAdjustmentConfig, OptiFeedbackMatrix, OptiFeedbackMatrixConfig
 from zeeguu.recommender.utils import accurate_duration_date, get_dataframe_user_reading_sessions, setup_df_correct, ShowData
 from datetime import timedelta, datetime
-from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories
+from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories, setup_sessions_4_categories_with_noise
 from zeeguu.recommender.recommender_system import RecommenderSystem
 
 app = create_app()
@@ -93,23 +93,37 @@ print(opti_matrix.have_read_sessions) """
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
-#path = "./zeeguu/recommender/embeddings/"
-#recommender.save_embeddings(path)
+
+start_time = time.time()
+print("SETTING UP RECOMMENDING")
 
 
 if test:
-    recommender = RecommenderSystem(sessions_df, 500, 500, test=True, generator_function=setup_session_2_categories)
+    recommender = RecommenderSystem(sessions_df, 4000, 10000, test=True, generator_function=setup_sessions_4_categories_with_noise, train=True)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
-recommender.build_regularized_model()
+#recommender.build_regularized_model()
 
-recommender.cf_model.train(num_iterations=50000, learning_rate=0.15)
+
+#recommender.cf_model.train(num_iterations=50000, learning_rate=0.15)
+
+#path = "./zeeguu/recommender/embeddings/"
+
+#recommender.save_embeddings(path)
+
+
+
+
+
 
 if(test):
     recommender.user_recommendations(1)
 else:
     recommender.user_recommendations(4338)
+
+print("--- %s seconds --- FOR RECOMMEDING" % (time.time() - start_time))
+
 
 #recommender.sessions.to_csv(get_resource_path() + 'sessions.csv', index=False)
 #recommender.article_neighbors(article_id=30)

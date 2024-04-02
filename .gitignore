@@ -34,3 +34,5 @@ tools/_playground.py
 
 zeeguu-anonymized-*
 zeeguu/recommender/resources/*
+zeeguu/recommender/embeddings/*
+

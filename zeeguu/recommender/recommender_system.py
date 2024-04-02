@@ -24,8 +24,8 @@ class Measure(Enum):
 class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
-    """ user_embeddings_path = "./zeeguu/recommender/embeddings/user_embedding.npy"
-    article_embeddings_path = "./zeeguu/recommender/embeddings/article_embedding.npy" """
+    user_embeddings_path = "./zeeguu/recommender/embeddings/user_embedding.npy"
+    article_embeddings_path = "./zeeguu/recommender/embeddings/article_embedding.npy"
 
     def __init__(
         self,
@@ -91,7 +91,6 @@ class RecommenderSystem:
 
         with open(path + "article_embedding.npy", 'wb' ) as f:
             np.save(f, article_em)
-        
     
     def build_model(self, stddev=1.0):
         """
@@ -119,16 +118,7 @@ class RecommenderSystem:
             tf.random_normal(
                 [self.num_items, self.embedding_dim], stddev=stddev))
         
-        #To load saved user embeddings
-        """ user_embeddings = tf.Variable(np.load(self.user_embeddings_path))
-        article_embeddings = tf.Variable(np.load(self.article_embeddings_path))
-
-
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            values = sess.run(user_embeddings[1])
-            print("values: ", values) """
-
+        
         train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
         metrics = {
@@ -215,12 +205,18 @@ class RecommenderSystem:
         user_likes = self.sessions[self.sessions["user_id"] == user_id]
         print(f"User likes: {user_likes['article_id']}")
 
+        user_embeddings = np.load(self.user_embeddings_path)
+        article_embeddings = np.load(self.article_embeddings_path)
+
+        """ user_embeddings = self.cf_model.embeddings["user_id"]
+        article_embeddings = self.cf_model.embeddings["article_id"] """
+
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?fe
         should_recommend = True
         if should_recommend:
-            valid_article_embeddings = filter_article_embeddings(self.cf_model.embeddings["article_id"], self.articles['id'])
+            valid_article_embeddings = filter_article_embeddings(article_embeddings, self.articles['id'])
             scores = self.compute_scores(
-                self.cf_model.embeddings["user_id"][user_id], valid_article_embeddings, measure)
+                user_embeddings[user_id], valid_article_embeddings, measure)
             score_key = str(measure) + ' score'
             df = pd.DataFrame({
                 score_key: list(scores),
