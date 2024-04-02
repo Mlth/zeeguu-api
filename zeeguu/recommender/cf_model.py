@@ -60,7 +60,7 @@ class CFModel(object):
       # Train and append results.
       for i in range(num_iterations + 1):
         _, results = self._session.run((train_op, metrics))
-        if (i % 100 == 0) or i == num_iterations:
+        if (i % (num_iterations/10) == 0) or i == num_iterations:
           print("\r iteration %d: " % i + ", ".join(
                 ["%s=%f" % (k, v) for r in results for k, v in r.items()]),
                 end='')

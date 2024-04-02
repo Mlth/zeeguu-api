@@ -42,10 +42,10 @@ class AdjustmentConfig:
         self.translation_adjustment_value = translation_adjustment_value
 
 class FeedbackMatrixConfig:
-    def __init__(self, show_data: 'list[ShowData]', adjustment_config: AdjustmentConfig, test_tensor: bool = False, data_since: datetime = None):
+    def __init__(self, adjustment_config: AdjustmentConfig, show_data: list[ShowData] =[], test_tensor: bool = False, data_since: datetime = None):
+        self.adjustment_config = adjustment_config
         self.show_data = show_data
         self.data_since = data_since
-        self.adjustment_config = adjustment_config
         self.test_tensor = test_tensor
 
 class FeedbackMatrix:

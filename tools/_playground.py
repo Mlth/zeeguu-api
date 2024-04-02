@@ -115,8 +115,11 @@ if(test):
 else:
     recommender.user_recommendations(4338)
 
-if test:
-    user_liked_articles = list(recommender.sessions[recommender.sessions['user_id'] == 1]['article_id'])
-    recommender.visualize_article_embeddings(marked_articles=user_liked_articles)
+#recommender.sessions.to_csv(get_resource_path() + 'sessions.csv', index=False)
+#recommender.article_neighbors(article_id=30)
+
+#if test:
+#    user_liked_articles = list(recommender.sessions[recommender.sessions['user_id'] == 1]['article_id'])
+#    recommender.visualize_article_embeddings(marked_articles=user_liked_articles)
 
 print("Ending playground")
