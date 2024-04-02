@@ -65,7 +65,6 @@ class RecommenderSystem:
         train = df[~df.index.isin(test.index)]
         return train, test
 
-
     def sparse_mean_square_error(self, sparse_sessions , user_embeddings, article_embeddings):
         """
         Args:
@@ -228,8 +227,8 @@ class RecommenderSystem:
         self.embeddings = train(tf_embeddings, total_loss, metrics, num_iterations, learning_rate, plot_results, optimizer)
 
     def get_tf_embeddings(self):
-        tf_user_embeddings = tf.Variable(self.embeddings["user_id"])
-        tf_article_embeddings = tf.Variable(self.embeddings["article_id"])
+        tf_user_embeddings = tf.Variable(self.embeddings["user_id"], dtype=tf.float32)
+        tf_article_embeddings = tf.Variable(self.embeddings["article_id"], dtype=tf.float32)
         tf_embeddings = {
             "user_id": tf_user_embeddings,
             "article_id": tf_article_embeddings
