@@ -24,6 +24,8 @@ class Measure(Enum):
 class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
+    """ user_embeddings_path = "./zeeguu/recommender/embeddings/user_embedding.npy"
+    article_embeddings_path = "./zeeguu/recommender/embeddings/article_embedding.npy" """
 
     def __init__(
         self,
@@ -78,6 +80,17 @@ class RecommenderSystem:
             axis=1)
         loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
         return loss
+    
+    def save_embeddings(self, path):
+
+        user_em = self.cf_model.embeddings["user_id"]
+        article_em = self.cf_model.embeddings["article_id"]
+
+        with open(path + "user_embedding.npy", 'wb' ) as f:
+            np.save(f, user_em)
+
+        with open(path + "article_embedding.npy", 'wb' ) as f:
+            np.save(f, article_em)
         
     
     def build_model(self, stddev=1.0):
@@ -105,6 +118,16 @@ class RecommenderSystem:
         article_embeddings = tf.Variable(
             tf.random_normal(
                 [self.num_items, self.embedding_dim], stddev=stddev))
+        
+        #To load saved user embeddings
+        """ user_embeddings = tf.Variable(np.load(self.user_embeddings_path))
+        article_embeddings = tf.Variable(np.load(self.article_embeddings_path))
+
+
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            values = sess.run(user_embeddings[1])
+            print("values: ", values) """
 
         train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
