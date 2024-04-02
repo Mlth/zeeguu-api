@@ -105,7 +105,10 @@ def add_filters_to_query(query, show_data: 'list[ShowData]'):
         )
         or_filters.append(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
     if len(or_filters) > 0:
-        query = query.filter(or_(*or_filters))
+        if len(or_filters) == 1:
+            query = query.filter(or_filters[0])
+        else:
+            query = query.filter(or_(*or_filters))
     return query
 
 
