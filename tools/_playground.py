@@ -1,9 +1,5 @@
 import time
 from elasticsearch import Elasticsearch
-import zeeguu
-from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
-from zeeguu.core.model import UserExerciseSession, User, UserReadingSession, Article, UserLanguage, UserActivityData, UserArticle
-import pandas as pd
 from zeeguu.core.model import db
 import sqlalchemy as database
 from zeeguu.api.app import create_app

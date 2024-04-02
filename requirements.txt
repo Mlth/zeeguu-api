@@ -14,7 +14,7 @@ git+https://github.com/zeeguu-ecosystem/Python-Translators.git@master#egg=python
 jieba3k
 jinja2
 langdetect
-lxml
+lxml==5.1.0
 mysqlclient
 newspaper3k==0.2.7
 nltk

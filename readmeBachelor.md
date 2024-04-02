@@ -4,7 +4,7 @@
 
 Run this command in WSL while having docker desktop up.
 
-``docker build -f Dockerfile.development -t zeeguu_api_dev .``
+``docker build -f Dockerfile -t zeeguu/api .``
 
 ### 2.
 
