@@ -52,70 +52,16 @@ print(sessions_df) """
 
 
 print("--- %s seconds ---" % (time.time() - start_time))
-""" DB_URI = zeeguu.core.app.config["SQLALCHEMY_DATABASE_URI"]
-engine = database.create_engine(DB_URI)
-
-start_time = time.time()
-
-matrix_config = OptiFeedbackMatrixConfig(
-    show_data=[ShowData.LIKED, ShowData.RATED_DIFFICULTY],
-    data_since= datetime.now() - timedelta(days=365), # accurate_duration_date
-    adjustment_config=OptiAdjustmentConfig(
-        difficulty_weight=2,
-        translation_adjustment_value=1
-    ),
-    test_tensor=test
-)
-
-opti_matrix = OptiFeedbackMatrix(matrix_config)
-opti_matrix.generate_opti_dfs()
-
-user_df = get_dataframe_user_reading_sessions(datetime.now() - timedelta(days=365))
-print("User_df query ")
-print(user_df.columns)
-print(len(user_df))
-
-sessions_df_from_opti = opti_matrix.sessions_df
-print("Opti matrix query")
-print(len(sessions_df_from_opti))
-
-liked_sessions_df_from_opti = opti_matrix.liked_sessions_df
-print("Liked sessions query")
-print(len(liked_sessions_df_from_opti))
-print(liked_sessions_df_from_opti.columns)
-
-print("Opti matrix have_read_sessions")
-print(opti_matrix.have_read_sessions) """
-
-
-
-
-
-print("--- %s seconds ---" % (time.time() - start_time))
-
 
 start_time = time.time()
 print("SETTING UP RECOMMENDING")
 
-
 if test:
-    recommender = RecommenderSystem(sessions_df, 4000, 10000, test=True, generator_function=setup_sessions_4_categories_with_noise, train=True)
+    recommender = RecommenderSystem(sessions_df, 500, 500, test=test, generator_function=setup_sessions_4_categories_with_noise)
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
-#recommender.build_regularized_model()
-
-
-#recommender.cf_model.train(num_iterations=50000, learning_rate=0.15)
-
-#path = "./zeeguu/recommender/embeddings/"
-
-#recommender.save_embeddings(path)
-
-
-
-
-
+recommender.train_model(num_iterations=50000, learning_rate=0.15)
 
 if(test):
     recommender.user_recommendations(1)
@@ -123,13 +69,5 @@ else:
     recommender.user_recommendations(4338)
 
 print("--- %s seconds --- FOR RECOMMEDING" % (time.time() - start_time))
-
-
-#recommender.sessions.to_csv(get_resource_path() + 'sessions.csv', index=False)
-#recommender.article_neighbors(article_id=30)
-
-#if test:
-#    user_liked_articles = list(recommender.sessions[recommender.sessions['user_id'] == 1]['article_id'])
-#    recommender.visualize_article_embeddings(marked_articles=user_liked_articles)
 
 print("Ending playground")

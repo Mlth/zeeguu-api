@@ -1,31 +1,17 @@
 import collections
-import matplotlib.pyplot as plt
+import os
 
-import tensorflow as tf
-tf = tf.compat.v1
-tf.disable_v2_behavior()
-tf.logging.set_verbosity(tf.logging.ERROR)
+from matplotlib import pyplot as plt
+import numpy as np
+from zeeguu.recommender.utils import import_tf
 
-class CFModel(object):
-  """Simple class that represents a collaborative filtering model"""
-  def __init__(self, loss, metrics=None):
-    """Initializes a CFModel.
-    Args:
-      embedding_vars: A dictionary of tf.Variables.
-      loss: A float Tensor. The loss to optimize.
-      metrics: optional list of dictionaries of Tensors. The metrics in each
-        dictionary will be plotted in a separate figure during training.
-    """
-    self._loss = loss
-    self._metrics = metrics
-    self._session = None
+tf = import_tf()
 
-  @property
-  def embeddings(self):
-    """The embeddings dictionary."""
-    return self._embeddings
+embeddings_path = "./zeeguu/recommender/embeddings/"
+user_embeddings_path = f"{embeddings_path}user_embedding.npy"
+article_embeddings_path = f"{embeddings_path}article_embedding.npy"
 
-  def train(self, embeddings, num_iterations, learning_rate, plot_results, optimizer):
+def train(embeddings, loss, metrics, num_iterations, learning_rate, plot_results, optimizer):
     """Trains the model.
     Args:
       iterations: number of iterations to run.
@@ -35,28 +21,28 @@ class CFModel(object):
     Returns:
       The metrics dictionary evaluated at the last iteration.
     """
-    with self._loss.graph.as_default():
+
+    with loss.graph.as_default():
       opt = optimizer(learning_rate)
-      train_op = opt.minimize(self._loss)
+      train_op = opt.minimize(loss)
       local_init_op = tf.group(
           tf.variables_initializer(opt.variables()),
           tf.local_variables_initializer())
-      if self._session is None:
-        self._session = tf.Session()
-        with self._session.as_default():
-          self._session.run(tf.global_variables_initializer())
-          self._session.run(tf.tables_initializer())
-          tf.train.start_queue_runners()
+    session = tf.Session()
+    with session.as_default():
+        session.run(tf.global_variables_initializer())
+        session.run(tf.tables_initializer())
+        tf.train.start_queue_runners()
 
-    with self._session.as_default():
+    with session.as_default():
       local_init_op.run()
       iterations = []
-      metrics = self._metrics or ({},)
-      metrics_vals = [collections.defaultdict(list) for _ in self._metrics]
+      metrics = metrics or ({},)
+      metrics_vals = [collections.defaultdict(list) for _ in metrics]
 
       # Train and append results.
       for i in range(num_iterations + 1):
-        _, results = self._session.run((train_op, metrics))
+        _, results = session.run((train_op, metrics))
         if (i % (num_iterations/10) == 0) or i == num_iterations:
           print("\r iteration %d: " % i + ", ".join(
                 ["%s=%f" % (k, v) for r in results for k, v in r.items()]),
@@ -81,5 +67,21 @@ class CFModel(object):
             ax.plot(iterations, v, label=k)
           ax.set_xlim([1, num_iterations])
           ax.legend()
-          
-      return embeddings
+
+    save_embeddings(embeddings)
+
+    return embeddings
+    
+def save_embeddings(embeddings):
+    user_em = embeddings["user_id"]
+    article_em = embeddings["article_id"]
+
+    if not os.path.exists(embeddings_path):
+        os.makedirs(embeddings_path)
+        print(f"Folder '{embeddings_path}' created successfully.")
+
+    with open(embeddings_path + "user_embedding.npy", 'wb' ) as f:
+        np.save(f, user_em)
+
+    with open(embeddings_path + "article_embedding.npy", 'wb' ) as f:
+        np.save(f, article_em)

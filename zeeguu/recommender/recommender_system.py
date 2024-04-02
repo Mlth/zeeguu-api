@@ -1,8 +1,11 @@
 from enum import Enum
+import os
 import numpy as np
 from zeeguu.recommender.cf_model import CFModel
 from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
+from zeeguu.recommender.train_utils import train
 from zeeguu.recommender.utils import filter_article_embeddings, get_recommendable_articles, setup_df_rs
+from zeeguu.recommender.train_utils import user_embeddings_path, article_embeddings_path
 import pandas as pd
 from typing import Callable
 from IPython import display
@@ -24,8 +27,6 @@ class Measure(Enum):
 class RecommenderSystem:
     cf_model = None
     visualizer = ModelVisualizer()
-    user_embeddings_path = "./zeeguu/recommender/embeddings/user_embedding.npy"
-    article_embeddings_path = "./zeeguu/recommender/embeddings/article_embedding.npy"
 
     def __init__(
         self,
@@ -34,7 +35,8 @@ class RecommenderSystem:
         num_items: int,
         embedding_dim : int =20,
         test=False,
-        generator_function: Callable=None #function type
+        generator_function: Callable=None, #function type
+        stddev=0.1,
     ):
         self.num_users = num_users
         self.num_items = num_items
@@ -42,6 +44,8 @@ class RecommenderSystem:
         self.embedding_dim = embedding_dim
         self.test=test
         self.generator_function = generator_function
+        self.stddev=stddev
+        self.embeddings = self.set_embeddings()
         if(test):
             print("Warning! Running in test mode")
             self.articles = generate_articles_with_titles(num_items)
@@ -80,58 +84,8 @@ class RecommenderSystem:
             axis=1)
         loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
         return loss
-    
-    def save_embeddings(self, path):
 
-        user_em = self.cf_model.embeddings["user_id"]
-        article_em = self.cf_model.embeddings["article_id"]
-
-        with open(path + "user_embedding.npy", 'wb' ) as f:
-            np.save(f, user_em)
-
-        with open(path + "article_embedding.npy", 'wb' ) as f:
-            np.save(f, article_em)
-    
-    def build_model(self, stddev=1.0):
-        """
-        Args:
-            embedding_dim: the dimension of the embedding vectors.
-            init_stddev: float, the standard deviation of the random initial embeddings.
-        Returns:
-            model: a CFModel.
-        """
-        # SparseTensor representation of the train and test datasets.
-        if(self.test):
-            self.sessions = self.generator_function(self.num_users, self.num_items) 
-            train_sessions, test_sessions = self.split_dataframe(self.sessions)
-            A_train = build_mock_sparse_tensor(train_sessions, "train", self.num_users, self.num_items)
-            A_test = build_mock_sparse_tensor(test_sessions, "test", self.num_users, self.num_items)
-        else:
-            train_sessions, test_sessions = self.split_dataframe(self.sessions)
-            A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
-            A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
-
-        user_embeddings = tf.Variable(
-            tf.random_normal(
-                [self.num_users, self.embedding_dim], stddev=stddev))
-        article_embeddings = tf.Variable(
-            tf.random_normal(
-                [self.num_items, self.embedding_dim], stddev=stddev))
-        
-        
-        train_loss = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
-        test_loss = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
-        metrics = {
-            'train_error': train_loss,
-            'test_error': test_loss
-        }
-        embeddings = {
-            "user_id": user_embeddings,
-            "article_id": article_embeddings
-        }
-        self.cf_model = CFModel(embeddings, train_loss, [metrics])
-
-    def build_regularized_model(self, regularization_coeff=.1, gravity_coeff=1., init_stddev=0.1):
+    def build_loss(self, regularization_coeff=.1, gravity_coeff=1.):
         """
         Args:
             ratings: the DataFrame of movie ratings.
@@ -152,10 +106,9 @@ class RecommenderSystem:
             A_train = build_liked_sparse_tensor(train_sessions, self.num_users, self.num_items)
             A_test = build_liked_sparse_tensor(test_sessions, self.num_users, self.num_items)
 
-        user_embeddings = tf.Variable(tf.random_normal(
-            [A_train.dense_shape[0], self.embedding_dim], stddev=init_stddev))
-        article_embeddings = tf.Variable(tf.random_normal(
-            [A_train.dense_shape[1], self.embedding_dim], stddev=init_stddev))
+        tf_embeddings = self.get_tf_embeddings()
+        user_embeddings = tf_embeddings["user_id"]
+        article_embeddings = tf_embeddings["article_id"]
 
         error_train = self.sparse_mean_square_error(A_train, user_embeddings, article_embeddings)
         error_test = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
@@ -175,12 +128,8 @@ class RecommenderSystem:
             'regularization_loss': regularization_loss,
             'gravity_loss': gravity_loss,
         }
-        embeddings = {
-            "user_id": user_embeddings,
-            "article_id": article_embeddings
-        }
 
-        self.cf_model = CFModel(embeddings, total_loss, [losses, loss_components])
+        return total_loss, [losses, loss_components]
 
     def compute_scores(self, query_embedding, item_embeddings, measure=Measure.DOT):
         """Computes the scores of the candidates given a query.
@@ -205,11 +154,8 @@ class RecommenderSystem:
         user_likes = self.sessions[self.sessions["user_id"] == user_id]
         print(f"User likes: {user_likes['article_id']}")
 
-        user_embeddings = np.load(self.user_embeddings_path)
-        article_embeddings = np.load(self.article_embeddings_path)
-
-        """ user_embeddings = self.cf_model.embeddings["user_id"]
-        article_embeddings = self.cf_model.embeddings["article_id"] """
+        user_embeddings = self.embeddings["user_id"]
+        article_embeddings = self.embeddings["article_id"]
 
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?fe
         should_recommend = True
@@ -247,6 +193,48 @@ class RecommenderSystem:
     def visualize_article_embeddings(self, marked_articles=[]):
         #TODO Fix for small test cases. Right now, the function crashes with low user/article count.
         self.visualizer.visualize_tsne_article_embeddings(self.cf_model, self.articles, marked_articles)
+
+    def set_embeddings(self):
+        if os.path.exists(user_embeddings_path) and os.path.exists(article_embeddings_path):
+            print("Attempting to load embeddings from files.")
+            user_embeddings = np.load(user_embeddings_path)
+            article_embeddings = np.load(article_embeddings_path)
+            embeddings = {
+                "user_id": user_embeddings,
+                "article_id": article_embeddings
+            }
+            return embeddings
+        
+        else:
+            print("No embeddings found. Building new model.")
+            user_embeddings = tf.Variable(tf.random_normal(
+                [self.num_users, self.embedding_dim], stddev=self.stddev))
+            article_embeddings = tf.Variable(tf.random_normal(
+                [self.num_items, self.embedding_dim], stddev=self.stddev))
+            
+            with tf.Session() as session:
+                session.run(tf.global_variables_initializer())
+                embeddings = {
+                    "user_id": user_embeddings.eval(),
+                    "article_id": article_embeddings.eval()
+                }
+
+            return embeddings
+        
+    def train_model(self, num_iterations=1000, learning_rate=0.1, plot_results=True, optimizer=tf.train.GradientDescentOptimizer):
+        total_loss, metrics = self.build_loss()
+        tf_embeddings = self.get_tf_embeddings()
+
+        self.embeddings = train(tf_embeddings, total_loss, metrics, num_iterations, learning_rate, plot_results, optimizer)
+
+    def get_tf_embeddings(self):
+        tf_user_embeddings = tf.Variable(self.embeddings["user_id"])
+        tf_article_embeddings = tf.Variable(self.embeddings["article_id"])
+        tf_embeddings = {
+            "user_id": tf_user_embeddings,
+            "article_id": tf_article_embeddings
+        }
+        return tf_embeddings
 
 def gravity(U, V):
     """Creates a gravity loss given two embedding matrices."""
