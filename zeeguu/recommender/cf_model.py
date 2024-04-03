@@ -48,7 +48,7 @@ class CFModel():
         train = df[~df.index.isin(test.index)]
         return train, test
 
-    def sparse_mean_square_error(self, sparse_sessions , user_embeddings, article_embeddings):
+    def sparse_mean_square_error(self, sparse_sessions, user_embeddings, article_embeddings):
         """
         Args:
             sparse_sessions: A SparseTensor session matrix, of dense_shape [N, M]

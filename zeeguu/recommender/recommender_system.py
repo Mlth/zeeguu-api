@@ -55,7 +55,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id : int, measure=Measure.DOT, exclude_read: bool =False): #, k=10):
+    def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool =False, k=None): #, k=10):
         user_likes = self.sessions[self.sessions["user_id"] == user_id]['article_id'].values
         print(f"User likes: {user_likes}")
 
@@ -65,20 +65,22 @@ class RecommenderSystem:
         # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
         if should_recommend:
-            valid_article_embeddings = filter_article_embeddings(article_embeddings, self.articles['id'])
+            valid_articles = self.articles[self.articles['language_id'] == language_id]
+            valid_article_embeddings = filter_article_embeddings(article_embeddings, valid_articles['id'])
             scores = self.compute_scores(
                 user_embeddings[user_id], valid_article_embeddings, measure)
             score_key = str(measure) + ' score'
             df = pd.DataFrame({
                 score_key: list(scores),
-                'article_id': self.articles['id'],
-                #'titles': self.articles['title'],
+                'article_id': valid_articles['id'],
+                'language_id': valid_articles['language_id'],
+                #'titles': valid_articles['title'],
             })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
             if exclude_read:
                 # remove articles that have already been read
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values
                 df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
-            display.display(df.sort_values([score_key], ascending=False)) # use .head(10) to only get 10 best recommendations
+            display.display(df.sort_values([score_key], ascending=False).head(len(df) if k is None else k))
 
             top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in df.sort_values([score_key], ascending=False).head(10)['article_id'].values]
             print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")

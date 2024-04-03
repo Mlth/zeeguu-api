@@ -248,15 +248,14 @@ def setup_df_rs(num_items : int) -> pd.DataFrame:
     articles = pd.merge(all_null_df, articles, on='id', how='left', validate="many_to_many")
     return articles
 
-def get_recommendable_articles(lowest_id=None) -> pd.DataFrame:
+def get_recommendable_articles(since_date: datetime=None, lowest_id=None) -> pd.DataFrame:
     '''Fetches all the valid articles that a user can be recommended'''
     query = f"""
-        Select distinct a.id, a.title
+        Select distinct a.id, a.title, a.language_id
         from article a
         join user_article ua on a.id = ua.article_id
-        where broken = 0 and ua.opened > {accurate_duration_date.timestamp()}
+        where broken = 0 {f'and ua.opened > {since_date.timestamp()}' if since_date is not None else ''}
     """
-    #FIX: Change accurate_duration_date to be a parameter or delete it
     if lowest_id:
         query += f" and id > {lowest_id}"
     articles = pd.read_sql_query(query, db.engine)
@@ -270,7 +269,7 @@ def filter_article_embeddings(embeddings, article_ids):
         embeddings_result = tf.nn.embedding_lookup(embeddings, [5])
         
         embeddings_array = embeddings_result.eval()'''
-        
+    
     return embeddings[article_ids]
 
 def setup_df_correct(num_items : int) -> pd.DataFrame:

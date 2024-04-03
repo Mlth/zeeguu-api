@@ -84,15 +84,15 @@ def train(embeddings, loss, metrics, num_iterations, learning_rate, plot_results
     return embeddings
     
 def save_embeddings(embeddings):
-    user_em = embeddings["user_id"]
-    article_em = embeddings["article_id"]
+  user_em = embeddings["user_id"]
+  article_em = embeddings["article_id"]
 
-    if not os.path.exists(embeddings_path):
-        os.makedirs(embeddings_path)
-        print(f"Folder '{embeddings_path}' created successfully.")
+  if not os.path.exists(embeddings_path):
+    os.makedirs(embeddings_path)
+    print(f"Folder '{embeddings_path}' created successfully.")
 
-    with open(embeddings_path + "user_embedding.npy", 'wb' ) as f:
-        np.save(f, user_em)
+  with open(embeddings_path + "user_embedding.npy", 'wb' ) as f:
+    np.save(f, user_em)
 
-    with open(embeddings_path + "article_embedding.npy", 'wb' ) as f:
-        np.save(f, article_em)
+  with open(embeddings_path + "article_embedding.npy", 'wb' ) as f:
+    np.save(f, article_em)
