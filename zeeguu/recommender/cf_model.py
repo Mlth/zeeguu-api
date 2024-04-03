@@ -48,7 +48,7 @@ class CFModel():
         train = df[~df.index.isin(test.index)]
         return train, test
 
-    def sparse_mean_square_error(self, sparse_sessions , user_embeddings, article_embeddings):
+    def sparse_mean_square_error(self, sparse_sessions, user_embeddings, article_embeddings):
         """
         Args:
             sparse_sessions: A SparseTensor session matrix, of dense_shape [N, M]
@@ -138,7 +138,7 @@ class CFModel():
 
             self.embeddings = embeddings
 
-    def train_model(self, num_iterations=1000, learning_rate=0.1, plot_results=True, optimizer=tf.train.AdamOptimizer):
+    def train_model(self, num_iterations=1000, learning_rate=0.1, plot_results=True, optimizer=tf.train.GradientDescentOptimizer):
         tf_embeddings, total_loss, metrics = self.build_loss()
 
         self.embeddings = train(tf_embeddings, total_loss, metrics, num_iterations, learning_rate, plot_results, optimizer)
