@@ -61,7 +61,7 @@ if test:
 else:
     recommender = RecommenderSystem(sessions_df, matrix.max_user_id, matrix.max_article_id)
 
-recommender.train_model(num_iterations=50000, learning_rate=0.15)
+recommender.cf_model.train_model(num_iterations=50000, learning_rate=0.15)
 
 if(test):
     recommender.user_recommendations(1)

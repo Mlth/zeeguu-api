@@ -1,4 +1,5 @@
 import collections
+from enum import Enum
 import os
 
 from matplotlib import pyplot as plt
@@ -10,6 +11,11 @@ tf = import_tf()
 embeddings_path = "./zeeguu/recommender/embeddings/"
 user_embeddings_path = f"{embeddings_path}user_embedding.npy"
 article_embeddings_path = f"{embeddings_path}article_embedding.npy"
+
+class Measure(Enum):
+    # If no ShowData is chosen, all data will be retrieved and shown.
+    DOT = 'dot'
+    COSINE = 'cosine'
 
 def train(embeddings, loss, metrics, num_iterations, learning_rate, plot_results, optimizer):
     """Trains the model.
