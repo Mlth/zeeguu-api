@@ -2,16 +2,17 @@ from enum import Enum
 import os
 import numpy as np
 from zeeguu.recommender.cf_model import CFModel
-from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.train_utils import Measure, train
-from zeeguu.recommender.utils import filter_article_embeddings, get_recommendable_articles, setup_df_rs
-from zeeguu.recommender.train_utils import user_embeddings_path, article_embeddings_path
+from zeeguu.recommender.utils.tensor_utils import build_liked_sparse_tensor
+from zeeguu.recommender.utils.train_utils import Measure, train
+from zeeguu.recommender.utils.recommender_utils import filter_article_embeddings, get_recommendable_articles, setup_df_rs
+from zeeguu.recommender.utils.train_utils import user_embeddings_path, article_embeddings_path
 import pandas as pd
 from typing import Callable
 from IPython import display
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
 from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
+from zeeguu.recommender.utils.elastic_utils import find_articles_like
 
 class RecommenderSystem:
     visualizer = ModelVisualizer()
@@ -83,6 +84,13 @@ class RecommenderSystem:
 
             top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in df.sort_values([score_key], ascending=False).head(10)['article_id'].values]
             print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
+            #give me the top 10 recommendations as a list of ids
+            
+            top_ten = df.sort_values([score_key], ascending=False).head(5)['article_id'].values
+            top_ten = find_articles_like(top_ten,5)
+            print("this is what elastic thinks \n")
+            for article in top_ten:
+                print(article.title, article.language)
         else:
             # Possibly do elastic stuff to just give some random recommendations
             return

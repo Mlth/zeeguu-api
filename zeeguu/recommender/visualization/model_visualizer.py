@@ -1,7 +1,7 @@
 import altair as alt
 import sklearn
 import sklearn.manifold
-from zeeguu.recommender.utils import filter_article_embeddings, get_resource_path
+from zeeguu.recommender.utils.recommender_utils import filter_article_embeddings, get_resource_path
 from typing import List
 
 class ModelVisualizer:

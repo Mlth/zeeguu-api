@@ -3,10 +3,8 @@ from elasticsearch import Elasticsearch
 from zeeguu.core.model import db
 import sqlalchemy as database
 from zeeguu.api.app import create_app
-from zeeguu.recommender.candidate_generator import initial_candidate_pool
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
 from zeeguu.recommender.opti_feedback_matrix import OptiAdjustmentConfig, OptiFeedbackMatrix, OptiFeedbackMatrixConfig
-from zeeguu.recommender.utils import accurate_duration_date, get_dataframe_user_reading_sessions, setup_df_correct, ShowData
 from datetime import timedelta, datetime
 from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories, setup_sessions_4_categories_with_noise
 from zeeguu.recommender.recommender_system import RecommenderSystem
@@ -15,7 +13,6 @@ app = create_app()
 app.app_context().push()
 print("Starting playground")
 sesh = db.session
-initial_candidate_pool()
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
 test = False
@@ -42,7 +39,7 @@ if test:
 else:
     recommender = RecommenderSystem(sessions=sessions_df, num_users=matrix.max_user_id, num_items=matrix.max_article_id)
 
-recommender.cf_model.train_model(num_iterations=50, learning_rate=0.15)
+recommender.cf_model.train_model(num_iterations=40000, learning_rate=0.05)
 
 if(test):
     recommender.user_recommendations(user_id=1)

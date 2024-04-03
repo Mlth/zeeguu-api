@@ -4,7 +4,7 @@ import os
 
 from matplotlib import pyplot as plt
 import numpy as np
-from zeeguu.recommender.utils import import_tf
+from zeeguu.recommender.utils.recommender_utils import import_tf
 
 tf = import_tf()
 

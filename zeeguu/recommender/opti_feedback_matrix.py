@@ -3,7 +3,7 @@
 import datetime
 from zeeguu.core.model.article import Article
 from zeeguu.core.model.user import User
-from zeeguu.recommender.utils import ShowData, get_all_user_language_levels, get_dataframe_user_reading_sessions, get_difficulty_adjustment_opti, get_sum_of_translation_from_user_activity_data, get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed
+from zeeguu.recommender.utils.recommender_utils import ShowData, get_all_user_language_levels, get_dataframe_user_reading_sessions, get_difficulty_adjustment_opti, get_sum_of_translation_from_user_activity_data, get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed
 from zeeguu.recommender.visualization.session_visualizer import SessionVisualizer
 import pandas as pd
 
