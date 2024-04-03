@@ -17,6 +17,11 @@ class Measure(Enum):
     DOT = 'dot'
     COSINE = 'cosine'
 
+def gravity(U, V):
+    """Creates a gravity loss given two embedding matrices."""
+    return 1. / (U.shape[0].value*V.shape[0].value) * tf.reduce_sum(
+        tf.matmul(U, U, transpose_a=True) * tf.matmul(V, V, transpose_a=True))
+
 def train(embeddings, loss, metrics, num_iterations, learning_rate, plot_results, optimizer):
     """Trains the model.
     Args:

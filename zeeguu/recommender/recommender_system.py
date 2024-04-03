@@ -12,12 +12,6 @@ from IPython import display
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
 from zeeguu.recommender.mock.generators_mock import generate_articles_with_titles
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
-from tensorflow.python.keras import layers
-import tensorflow as tf
-tf = tf.compat.v1
-tf.disable_v2_behavior()
-tf.logging.set_verbosity(tf.logging.ERROR)
-@tf.function(experimental_follow_type_hints=True)
 
 class RecommenderSystem:
     visualizer = ModelVisualizer()
@@ -28,19 +22,18 @@ class RecommenderSystem:
         num_users: int,
         num_items: int,
         embedding_dim : int =20,
-        test=False,
         generator_function: Callable=None, #function type
         stddev=0.1,
     ):
-        self.sessions = sessions
-        self.test=test
-        self.generator_function = generator_function
-        self.cf_model = CFModel(sessions, num_users, num_items, embedding_dim, test, stddev)
-        if(test):
+        self.test=generator_function is not None
+        if(self.test):
             print("Warning! Running in test mode")
+            self.sessions = generator_function(num_users, num_items)
             self.articles = generate_articles_with_titles(num_items)
         else:
+            self.sessions = sessions
             self.articles = get_recommendable_articles()
+        self.cf_model = CFModel(self.sessions, num_users, num_items, embedding_dim, self.test, stddev)
 
     def compute_scores(self, query_embedding, item_embeddings, measure=Measure.DOT):
         """Computes the scores of the candidates given a query.
@@ -62,13 +55,13 @@ class RecommenderSystem:
         return scores
     
     def user_recommendations(self, user_id : int, measure=Measure.DOT, exclude_read: bool =False): #, k=10):
-        user_likes = self.sessions[self.sessions["user_id"] == user_id]
-        print(f"User likes: {user_likes['article_id']}")
+        user_likes = self.sessions[self.sessions["user_id"] == user_id]['article_id'].values
+        print(f"User likes: {user_likes}")
 
         user_embeddings = self.cf_model.embeddings["user_id"]
         article_embeddings = self.cf_model.embeddings["article_id"]
 
-        # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?fe
+        # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
         if should_recommend:
             valid_article_embeddings = filter_article_embeddings(article_embeddings, self.articles['id'])
@@ -85,6 +78,9 @@ class RecommenderSystem:
                 read_articles = self.sessions[self.sessions.user_id == user_id]["article_id"].values
                 df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
             display.display(df.sort_values([score_key], ascending=False)) # use .head(10) to only get 10 best recommendations
+
+            top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in df.sort_values([score_key], ascending=False).head(10)['article_id'].values]
+            print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
         else:
             # Possibly do elastic stuff to just give some random recommendations
             return
