@@ -72,6 +72,7 @@ class RecommenderSystem:
             df = pd.DataFrame({
                 score_key: list(scores),
                 'article_id': valid_articles['id'],
+                'language_id': valid_articles['language_id'],
                 #'titles': valid_articles['title'],
             })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
             if exclude_read:
