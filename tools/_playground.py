@@ -42,11 +42,11 @@ if test:
 else:
     recommender = RecommenderSystem(sessions=sessions_df, num_users=matrix.max_user_id, num_items=matrix.max_article_id)
 
-recommender.cf_model.train_model(num_iterations=500, learning_rate=0.15)
+recommender.cf_model.train_model(num_iterations=50, learning_rate=0.15)
 
 if(test):
-    recommender.user_recommendations(1)
+    recommender.user_recommendations(user_id=1)
 else:
-    recommender.user_recommendations(4338)
+    recommender.user_recommendations(user_id=4338, language_id=9)
 
 print("Ending playground")
