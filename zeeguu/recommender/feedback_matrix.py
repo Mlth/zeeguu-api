@@ -3,8 +3,8 @@ from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedb
 from zeeguu.core.model.user import User
 from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
-from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions, get_sum_of_translation_from_user_activity_data, get_all_user_article_information, get_all_article_difficulty_feedback, get_all_user_language_levels
+from zeeguu.recommender.utils.tensor_utils import build_liked_sparse_tensor
+from zeeguu.recommender.utils.recommender_utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions, get_sum_of_translation_from_user_activity_data, get_all_user_article_information, get_all_article_difficulty_feedback, get_all_user_language_levels
 from datetime import datetime
 import pandas as pd
 from collections import Counter

@@ -7,10 +7,10 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from zeeguu.recommender.train_utils import article_embeddings_path, gravity, user_embeddings_path
+from zeeguu.recommender.utils.train_utils import article_embeddings_path, gravity, user_embeddings_path
 from zeeguu.recommender.mock.tensor_utils_mock import build_mock_sparse_tensor
-from zeeguu.recommender.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.train_utils import Measure, train
+from zeeguu.recommender.utils.tensor_utils import build_liked_sparse_tensor
+from zeeguu.recommender.utils.train_utils import Measure, train
 tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -138,7 +138,7 @@ class CFModel():
 
             self.embeddings = embeddings
 
-    def train_model(self, num_iterations=1000, learning_rate=0.1, plot_results=True, optimizer=tf.train.AdamOptimizer):
+    def train_model(self, num_iterations=1000, learning_rate=0.1, plot_results=True, optimizer=tf.train.GradientDescentOptimizer):
         tf_embeddings, total_loss, metrics = self.build_loss()
 
         self.embeddings = train(tf_embeddings, total_loss, metrics, num_iterations, learning_rate, plot_results, optimizer)

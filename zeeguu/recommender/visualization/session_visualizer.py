@@ -1,7 +1,7 @@
 from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
-from zeeguu.recommender.utils import  ShowData, days_since_normalizer, get_expected_reading_time, get_resource_path, lower_bound_reading_speed, upper_bound_reading_speed
+from zeeguu.recommender.utils.recommender_utils import  ShowData, days_since_normalizer, get_expected_reading_time, get_resource_path, lower_bound_reading_speed, upper_bound_reading_speed
 import tensorflow as tf
 tf = tf.compat.v1
 tf.disable_v2_behavior()

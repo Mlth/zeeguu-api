@@ -65,3 +65,27 @@ def initial_candidate_pool() -> 'list[Article]':
     return query
 
 
+def find_articles_like(recommended_aricles_ids: 'list[int]', limit: int) -> 'list[Article]':
+    es = Elasticsearch(ES_CONN_STRING)
+    fields = ["language", "content", "title"]
+    for id in recommended_aricles_ids:
+        res = Article.find_by_id(id)
+        print(res.title, res.language)
+    mlt_query = {
+        "query": {
+        "more_like_this": {
+            "fields": fields,
+            "like": [
+                {
+                    "_index": ES_ZINDEX,
+                    "_id": doc_id
+                }
+                for doc_id in recommended_aricles_ids
+            ],
+            "min_term_freq": 1,
+            "max_query_terms": 12
+        }
+    }      
+    }
+    res = es.search(index=ES_ZINDEX, body=mlt_query, size=limit)
+    return _to_articles_from_ES_hits(res["hits"]["hits"])

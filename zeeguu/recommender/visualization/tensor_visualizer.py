@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 import os
 
-from zeeguu.recommender.utils import get_resource_path
+from zeeguu.recommender.utils.recommender_utils import get_resource_path
 
 def visualize_tensor(tensor, name):
     """
