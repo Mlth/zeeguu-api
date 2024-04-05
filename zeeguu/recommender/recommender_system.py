@@ -86,11 +86,11 @@ class RecommenderSystem:
             print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             #give me the top 10 recommendations as a list of ids
             
-            top_ten = df.sort_values([score_key], ascending=False).head(5)['article_id'].values
-            top_ten = find_articles_like(top_ten,5)
+            top_ten = df.sort_values([score_key], ascending=False).head(10)['article_id'].values
+            articles_to_recommend = find_articles_like(top_ten,5,30)
             print("this is what elastic thinks \n")
-            for article in top_ten:
-                print(article.title, article.language)
+            for article in articles_to_recommend:
+                print(article.title, article.language, article.published_time)
         else:
             # Possibly do elastic stuff to just give some random recommendations
             return

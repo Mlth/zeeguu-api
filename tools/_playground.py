@@ -21,7 +21,7 @@ print("setting up config")
 
 matrix_config = FeedbackMatrixConfig(
     show_data=[],
-    data_since=accurate_duration_date, #datetime.now() - timedelta(days=365), # accurate_duration_date
+    data_since=datetime.now() - timedelta(days=130), # accurate_duration_date
     adjustment_config=AdjustmentConfig(
         difficulty_weight=2,
         translation_adjustment_value=1
@@ -39,11 +39,11 @@ if test:
 else:
     recommender = RecommenderSystem(sessions=sessions_df, num_users=matrix.max_user_id, num_items=matrix.max_article_id)
 
-recommender.cf_model.train_model(num_iterations=40000, learning_rate=0.05)
+#recommender.cf_model.train_model(num_iterations=5000, learning_rate=0.05)
 
 if(test):
     recommender.user_recommendations(user_id=1)
 else:
-    recommender.user_recommendations(user_id=4338, language_id=9)
+    recommender.user_recommendations(user_id=534, language_id=9)
 
 print("Ending playground")
