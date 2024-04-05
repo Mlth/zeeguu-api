@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 from zeeguu.core.model import Language
 from zeeguu.core.model import Article, UserReadingSession, User
 from zeeguu.core.elastic.settings import ES_CONN_STRING, ES_ZINDEX
@@ -65,27 +66,43 @@ def initial_candidate_pool() -> 'list[Article]':
     return query
 
 
-def find_articles_like(recommended_aricles_ids: 'list[int]', limit: int) -> 'list[Article]':
+
+def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, article_age: int) -> 'list[Article]':
     es = Elasticsearch(ES_CONN_STRING)
     fields = ["language", "content", "title"]
-    for id in recommended_aricles_ids:
-        res = Article.find_by_id(id)
-        print(res.title, res.language)
+
+    like_documents = [
+        {"_index": ES_ZINDEX, "_id": str(doc_id)} for doc_id in recommended_articles_ids
+    ]
+
+    cutoff_date = datetime.now() - timedelta(days=article_age)
+
     mlt_query = {
         "query": {
-        "more_like_this": {
-            "fields": fields,
-            "like": [
-                {
-                    "_index": ES_ZINDEX,
-                    "_id": doc_id
+            "bool": {
+                "should": {  
+                    "more_like_this": {
+                        "fields": fields,
+                        "like": like_documents,
+                        "min_term_freq": 2, 
+                        "max_query_terms": 25, 
+                        "min_doc_freq": 5, 
+                        "min_word_length" : 3
+                    }
+                },
+                "filter": {
+                    "range": {
+                        "published_time": {
+                            "gte": cutoff_date.strftime('%Y-%m-%dT%H:%M:%S'),
+                            "lte": "now"
+                        }
+                    }
                 }
-                for doc_id in recommended_aricles_ids
-            ],
-            "min_term_freq": 1,
-            "max_query_terms": 12
-        }
-    }      
+            }
+        },
+        "sort": [{"published_time": {"order": "desc"}}]
     }
+
+    # Execute the query
     res = es.search(index=ES_ZINDEX, body=mlt_query, size=limit)
     return _to_articles_from_ES_hits(res["hits"]["hits"])
