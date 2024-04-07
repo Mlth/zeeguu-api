@@ -39,7 +39,7 @@ if test:
 else:
     recommender = RecommenderSystem(sessions=sessions_df, num_users=matrix.max_user_id, num_items=matrix.max_article_id)
 
-#recommender.cf_model.train_model(num_iterations=5000, learning_rate=0.05)
+recommender.cf_model.train_model(num_iterations=5, learning_rate=0.05)
 
 if(test):
     recommender.user_recommendations(user_id=1)
