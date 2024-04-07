@@ -3,6 +3,7 @@ from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedb
 from zeeguu.core.model.user import User
 from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
+from zeeguu.recommender.mapper import Mapper
 from zeeguu.recommender.utils.tensor_utils import build_liked_sparse_tensor
 from zeeguu.recommender.utils.recommender_utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions, get_sum_of_translation_from_user_activity_data, get_all_user_article_information, get_all_article_difficulty_feedback, get_all_user_language_levels
 from datetime import datetime
@@ -58,15 +59,13 @@ class FeedbackMatrix:
     have_read_sessions = None
     feedback_diff_list_toprint = None
     feedback_counter = 0
-    
 
-    def __init__(self, config: FeedbackMatrixConfig):
+    def __init__(self, config: FeedbackMatrixConfig, mapper: Mapper, num_users: int, num_articles: int):
         self.config = config
-        self.num_of_users = User.num_of_users()
-        self.num_of_articles = Article.num_of_articles()
+        self.mapper = mapper
+        self.num_of_users = num_users
+        self.num_of_articles = num_articles
         self.visualizer = SessionVisualizer()
-        self.max_article_id = Article.query.filter(Article.broken == 0).order_by(Article.id.desc()).first().id
-        self.max_user_id = User.query.filter(User.is_dev == False).order_by(User.id.desc()).first().id
 
     def get_sessions(self):
         '''Gets all user reading sessions with respect to the given config'''
@@ -183,6 +182,10 @@ class FeedbackMatrix:
         if self.config.test_tensor:
             liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(1, 5, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
         else:
+            for i in range(len(liked_sessions)):
+                liked_sessions[i].user_id = self.mapper.user_id_to_order.get(liked_sessions[i].user_id)
+                liked_sessions[i].article_id = self.mapper.article_id_to_order.get(liked_sessions[i].article_id)
+
             liked_df = self.__session_list_to_df(liked_sessions)
 
         self.sessions_df = df
@@ -207,7 +210,7 @@ class FeedbackMatrix:
         if (self.liked_sessions_df is None or self.sessions_df is None or self.have_read_sessions is None) or force:
             self.generate_dfs()
 
-        self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.max_user_id, self.max_article_id)
+        self.tensor = build_liked_sparse_tensor(self.liked_sessions_df, self.num_of_users, self.num_of_articles)
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")

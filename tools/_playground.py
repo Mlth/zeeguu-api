@@ -4,6 +4,7 @@ from zeeguu.core.model import db
 import sqlalchemy as database
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
+from zeeguu.recommender.mapper import Mapper
 from zeeguu.recommender.opti_feedback_matrix import OptiAdjustmentConfig, OptiFeedbackMatrix, OptiFeedbackMatrixConfig
 from datetime import timedelta, datetime
 from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories, setup_sessions_4_categories_with_noise
@@ -19,6 +20,16 @@ test = False
 
 print("setting up config")
 
+
+start = time.time()
+mapper = Mapper()
+
+num_users = mapper.num_users
+num_items = mapper.num_articles
+print("Time to set up mapper: ", time.time() - start)
+
+
+start = time.time()
 matrix_config = FeedbackMatrixConfig(
     show_data=[],
     data_since=datetime.now() - timedelta(days=130), # accurate_duration_date
@@ -29,21 +40,33 @@ matrix_config = FeedbackMatrixConfig(
     test_tensor=test
 )
 
-matrix = FeedbackMatrix(matrix_config)
+matrix = FeedbackMatrix(matrix_config, mapper, num_users=num_users, num_articles=num_items)
 matrix.generate_dfs()
+print("Time to generate dfs: ", time.time() - start)
 
+
+start = time.time()
 sessions_df = matrix.liked_sessions_df
 
 if test:
     recommender = RecommenderSystem(sessions_df, 1000, 1000, generator_function=setup_sessions_4_categories_with_noise)
 else:
-    recommender = RecommenderSystem(sessions=sessions_df, num_users=matrix.max_user_id, num_items=matrix.max_article_id)
+    recommender = RecommenderSystem(sessions=sessions_df, num_users=num_users, num_items=num_items, mapper=mapper)
+print("Time to set up recommender: ", time.time() - start)
 
-recommender.cf_model.train_model(num_iterations=5, learning_rate=0.05)
+
+start = time.time()
+recommender.cf_model.train_model(num_iterations=5000, learning_rate=0.05)
+print("Time to train model: ", time.time() - start)
+
+
+start = time.time()
 
 if(test):
     recommender.user_recommendations(user_id=1)
 else:
-    recommender.user_recommendations(user_id=534, language_id=9)
+    recommender.user_recommendations(user_id=535, language_id=9)
+
+print("Time to get recommendations: ", time.time() - start)
 
 print("Ending playground")
