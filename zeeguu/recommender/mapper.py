@@ -60,7 +60,8 @@ class Mapper:
                 self.user_id_to_order[user.id] = index
                 index += 1
             self.num_of_users = index
-
+            if not (os.path.exists(mappings_path)):
+                os.makedirs(mappings_path)
             with open(user_order_to_id_path, 'wb') as f:
                 pickle.dump(self.user_order_to_id, f)
             with open(user_id_to_order_path, 'wb') as f:
