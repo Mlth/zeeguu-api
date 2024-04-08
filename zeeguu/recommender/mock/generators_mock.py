@@ -18,6 +18,7 @@ def generate_articles_with_titles(size) -> pd.DataFrame:
     articles = pd.DataFrame()
     articles['id'] = range(0, size)
     articles['title'] = [f'article_{i}' for i in range(0, size)]
+    articles['language_id'] = 1
     return articles
 
 def setup_session_5_likes_range(num_users, num_items) -> pd.DataFrame:
