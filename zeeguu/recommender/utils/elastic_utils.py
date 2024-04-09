@@ -81,7 +81,7 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
         "query": {
             "bool": {
                 "must": [
-                    {"term": {"language": language.name}}
+                    {'match': {'language': language.name}}
                 ],
                 "should": {  
                     "more_like_this": {
