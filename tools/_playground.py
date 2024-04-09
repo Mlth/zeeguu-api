@@ -1,25 +1,26 @@
 import time
-from elasticsearch import Elasticsearch
 from zeeguu.core.model import db
-import sqlalchemy as database
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
 from zeeguu.recommender.mapper import Mapper
-from zeeguu.recommender.opti_feedback_matrix import OptiAdjustmentConfig, OptiFeedbackMatrix, OptiFeedbackMatrixConfig
 from datetime import timedelta, datetime
 from zeeguu.recommender.mock.generators_mock import setup_session_5_likes_range, setup_session_2_categories, setup_sessions_4_categories_with_noise
 from zeeguu.recommender.recommender_system import RecommenderSystem
+from zeeguu.recommender.utils.train_utils import remove_saved_embeddings_and_mappings
 
 app = create_app()
 app.app_context().push()
 print("Starting playground")
 sesh = db.session
 
-# Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
 test = True
+fresh = True
 
 print("setting up config")
 
+
+if(fresh):
+    remove_saved_embeddings_and_mappings()
 
 start = time.time()
 mapper = Mapper()
@@ -27,6 +28,7 @@ mapper = Mapper()
 num_users = mapper.num_users
 num_items = mapper.num_articles
 print("Time to set up mapper: ", time.time() - start)
+
 
 
 start = time.time()
@@ -56,7 +58,7 @@ print("Time to set up recommender: ", time.time() - start)
 
 
 start = time.time()
-recommender.cf_model.train_model(num_iterations=5000, learning_rate=0.05)
+recommender.cf_model.train_model(num_iterations=1, learning_rate=1)
 print("Time to train model: ", time.time() - start)
 
 
