@@ -4,8 +4,8 @@ from pandas import DataFrame
 from zeeguu.core.model.article import Article
 from zeeguu.core.model.user import User
 import pickle
+from zeeguu.recommender.utils.train_utils import mappings_path
 
-mappings_path = "./zeeguu/recommender/mappings/"
 user_order_to_id_path = f"{mappings_path}user_order_mapping.pkl"
 user_id_to_order_path = f"{mappings_path}user_id_mapping.pkl"
 article_order_to_id_path = f"{mappings_path}article_order_mapping.pkl"
