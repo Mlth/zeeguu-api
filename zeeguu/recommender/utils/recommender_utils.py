@@ -150,8 +150,10 @@ def get_sum_of_translation_from_user_activity_data(data_since: datetime):
     query = (
         UserActivityData.query
             .filter(UserActivityData.event.like('%TRANSLATE TEXT%'))
-            .filter(UserActivityData.time >= data_since)
     )
+    if data_since:
+        query = query.filter(UserActivityData.time >= data_since)
+
     for row in query:
         if (row.user_id, row.article_id) not in count_dict:
             count_dict[(row.user_id, row.article_id)] = {
@@ -168,8 +170,9 @@ def get_all_user_article_information(data_since: datetime):
     query = (
         UserArticle.query
             .filter(UserArticle.opened.isnot(None))
-            .filter(UserArticle.opened >= data_since)
     )
+    if data_since:
+        query = query.filter(UserArticle.opened >= data_since)
     for row in query:
         if (row.user_id, row.article_id) not in liked_dict:
             liked_dict[(row.user_id, row.article_id)] = { 'liked': int(row.liked) }
@@ -183,8 +186,9 @@ def get_all_article_difficulty_feedback(data_since: datetime):
     query = (
         ArticleDifficultyFeedback.query
             .filter(ArticleDifficultyFeedback.difficulty_feedback.isnot(None))
-            .filter(ArticleDifficultyFeedback.date >= data_since)
     )
+    if data_since:
+        query = query.filter(ArticleDifficultyFeedback.date >= data_since)
     for row in query:
         if (row.user_id, row.article_id) not in feedback_dict:
             feedback_dict[(row.user_id, row.article_id)] = { 'difficulty_feedback': row.difficulty_feedback }
