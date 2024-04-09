@@ -13,8 +13,8 @@ app.app_context().push()
 print("Starting playground")
 sesh = db.session
 
-test = True
-fresh = True
+test = False
+fresh = False
 
 print("setting up config")
 
@@ -33,8 +33,7 @@ print("Time to set up mapper: ", time.time() - start)
 
 start = time.time()
 matrix_config = FeedbackMatrixConfig(
-    show_data=[],
-    data_since=datetime.now() - timedelta(days=130), # accurate_duration_date
+    show_data=[], # accurate_duration_date
     adjustment_config=AdjustmentConfig(
         difficulty_weight=2,
         translation_adjustment_value=1
@@ -58,7 +57,7 @@ print("Time to set up recommender: ", time.time() - start)
 
 
 start = time.time()
-recommender.cf_model.train_model(num_iterations=1, learning_rate=1)
+recommender.cf_model.train_model(num_iterations=5000, learning_rate=0.1)
 print("Time to train model: ", time.time() - start)
 
 

@@ -136,10 +136,8 @@ class FeedbackMatrix:
             self.config.adjustment_config = AdjustmentConfig(difficulty_weight=self.default_difficulty_weight, translation_adjustment_value=self.default_translation_adjustment_value)
 
         user_language_levels = get_all_user_language_levels()
-        #print(f"user language {user_language_levels} ")
        
         for session in sessions.keys():
-            #sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
             if (sessions[session].user_id, sessions[session].article_id) in translate_data:
                 sessions[session].session_duration -= translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
 

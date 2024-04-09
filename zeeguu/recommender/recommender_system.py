@@ -60,7 +60,10 @@ class RecommenderSystem:
         return scores
     
     def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool =False, k=None):
-        user_order = self.mapper.user_id_to_order.get(user_id)
+        if self.test:
+            user_order = user_id
+        else:
+            user_order = self.mapper.user_id_to_order.get(user_id)
         user_likes = self.sessions[self.sessions["user_id"] == user_order]['article_id'].values
         print(f"User likes: {user_likes}")
 

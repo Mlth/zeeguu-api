@@ -99,14 +99,13 @@ def save_embeddings(embeddings):
     np.save(f, article_em)
     
 def remove_saved_embeddings_and_mappings():
-  remove_folder_and_files(embeddings_path)
-  remove_folder_and_files(mappings_path)
+  __remove_files(embeddings_path)
+  __remove_files(mappings_path)
   
-def remove_folder_and_files(folder_path):
+def __remove_files(folder_path):
   if os.path.exists(folder_path):
     for file in os.listdir(folder_path):
       os.remove(folder_path + file)
-    os.rmdir(folder_path)
-    print(f"Folder '{folder_path}' removed successfully.")
+    print(f"Files in '{folder_path}' removed successfully.")
   else:
     print(f"Folder '{folder_path}' does not exist.")
