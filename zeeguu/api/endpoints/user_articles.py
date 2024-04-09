@@ -2,6 +2,7 @@ import flask
 
 from zeeguu.core.content_recommender import article_recommendations_for_user, topic_filter_for_user
 from zeeguu.core.model import UserArticle, Article, PersonalCopy
+from zeeguu.recommender import Singleton
 
 from zeeguu.api.utils.route_wrappers import cross_domain, with_session
 from zeeguu.api.utils.json_result import json_result
@@ -33,16 +34,15 @@ def user_articles_recommended(count: int = 20):
 
     return json_result(article_infos)
 
-
-@api.route("/user_articles/saved", methods=["GET"])
+@api.route("/user_articles/cfmodel", methods=("GET",))
 @cross_domain
 @with_session
-def saved_articles():
-    saves = PersonalCopy.all_for(flask.g.user)
-
-    article_infos = [
-        UserArticle.user_article_info(flask.g.user, e) for e in saves
-    ]
+def user_articles_cfmodel():
+    
+    print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
+    article_infos = []
+    rec = Singleton().makeRecommender()
+    article_infos = [UserArticle.user_article_info(flask.g.user, a) for a in rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)]
 
     return json_result(article_infos)
 

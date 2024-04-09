@@ -16,7 +16,7 @@ print("Starting playground")
 sesh = db.session
 
 # Only temp solution. Set this to True if you want to use a very small user- and article space and only 2 sessions.
-test = True
+test = False
 
 print("setting up config")
 
