@@ -25,7 +25,7 @@ import sqlalchemy as database
 
 tf = import_tf()
 
-resource_path = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
+resource_path = './zeeguu/recommender/resources/'
 
 average_reading_speed = 70
 upper_bound_reading_speed = 45
