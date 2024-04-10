@@ -64,8 +64,11 @@ class RecommenderSystem:
             user_order = user_id
         else:
             user_order = self.mapper.user_id_to_order.get(user_id)
-        user_likes = self.sessions[self.sessions["user_id"] == user_order]['article_id'].values
-        print(f"User likes: {user_likes}")
+        if self.sessions is not None:
+            user_likes = self.sessions[self.sessions["user_id"] == user_order]['article_id'].values
+            if not self.test:
+                user_likes = [self.mapper.article_order_to_id.get(l) for l in user_likes]
+            print(f"User likes: {sorted(user_likes)}")
 
         user_embeddings = self.cf_model.embeddings["user_id"]
         article_embeddings = self.cf_model.embeddings["article_id"]
@@ -86,16 +89,23 @@ class RecommenderSystem:
             })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
             if exclude_read:
                 # remove articles that have already been read
-                read_articles = self.sessions[self.sessions.user_id == user_order]["article_id"].values
+                if self.sessions is not None:
+                    read_articles = self.sessions[self.sessions.user_id == user_order]["article_id"].values
+                else:
+                    read_articles = []
                 df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
-            df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
-            display.display(df.sort_values([score_key], ascending=False).head(len(df) if k is None else k))
+            if not self.test:
+                df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
+            df = df.iloc[df[score_key].apply(lambda x: abs(x - 1)).argsort()]
+            display.display(df.head(len(df) if k is None else k))
 
-            top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in df.sort_values([score_key], ascending=False).head(10)['article_id'].values]
-            print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
+            top_results = df.head(10)
+
+            #top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in top_results['article_id'].values]
+            #print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
-            top_ten = df.sort_values([score_key], ascending=False).head(10)['article_id'].values
-            articles_to_recommend = find_articles_like(top_ten,5,250, language_id)
+            top_ten = top_results['article_id'].values
+            articles_to_recommend = find_articles_like(top_ten, 5, 255, language_id)
             print("this is what elastic thinks \n")
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)

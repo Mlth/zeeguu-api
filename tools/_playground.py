@@ -1,4 +1,5 @@
 import time
+from zeeguu.core.elastic.indexing import index_all_articles
 from zeeguu.core.model import db
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
@@ -52,13 +53,13 @@ sessions_df = matrix.liked_sessions_df
 if test:
     recommender = RecommenderSystem(sessions_df, mapper=mapper,num_users=1000, num_items=1000, generator_function=setup_sessions_4_categories_with_noise)
 else:
-    recommender = RecommenderSystem(sessions=sessions_df, num_users=num_users, num_items=num_items, mapper=mapper)
+    recommender = RecommenderSystem(sessions=None, num_users=num_users, num_items=num_items, mapper=mapper)
 print("Time to set up recommender: ", time.time() - start)
 
 
-start = time.time()
-recommender.cf_model.train_model(num_iterations=5000, learning_rate=0.1)
-print("Time to train model: ", time.time() - start)
+#start = time.time()
+#recommender.cf_model.train_model(num_iterations=100, learning_rate=0.1)
+#print("Time to train model: ", time.time() - start)
 
 
 start = time.time()
@@ -66,8 +67,9 @@ start = time.time()
 if(test):
     recommender.user_recommendations(user_id=1, language_id=1)
 else:
-    recommender.user_recommendations(user_id=535, language_id=9)
+    recommender.user_recommendations(user_id=1911, language_id=9)
 
 print("Time to get recommendations: ", time.time() - start)
+
 
 print("Ending playground")
