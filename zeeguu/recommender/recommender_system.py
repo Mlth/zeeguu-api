@@ -105,7 +105,7 @@ class RecommenderSystem:
             #print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
             top_ten = top_results['article_id'].values
-            articles_to_recommend = find_articles_like(top_ten, 5, 255, language_id)
+            articles_to_recommend = find_articles_like(top_ten,5,15, language_id)
             print("this is what elastic thinks \n")
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)

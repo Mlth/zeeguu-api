@@ -1,5 +1,4 @@
 import time
-from zeeguu.core.elastic.indexing import index_all_articles
 from zeeguu.core.model import db
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
@@ -34,7 +33,7 @@ print("Time to set up mapper: ", time.time() - start)
 
 start = time.time()
 matrix_config = FeedbackMatrixConfig(
-    show_data=[], # accurate_duration_date
+    show_data=[], data_since=timedelta(days=90),
     adjustment_config=AdjustmentConfig(
         difficulty_weight=2,
         translation_adjustment_value=1
@@ -57,9 +56,9 @@ else:
 print("Time to set up recommender: ", time.time() - start)
 
 
-#start = time.time()
-#recommender.cf_model.train_model(num_iterations=100, learning_rate=0.1)
-#print("Time to train model: ", time.time() - start)
+start = time.time()
+#recommender.cf_model.train_model(num_iterations=10000, learning_rate=0.1)
+print("Time to train model: ", time.time() - start)
 
 
 start = time.time()
