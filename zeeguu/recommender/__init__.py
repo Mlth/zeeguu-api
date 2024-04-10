@@ -1,4 +1,4 @@
-from .singleton import (
-    Singleton
+from .recommender_system_singleton import (
+    RecommenderSystemSingleton
 )
 
