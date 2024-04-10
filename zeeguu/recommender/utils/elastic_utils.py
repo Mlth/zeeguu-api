@@ -103,7 +103,7 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
                 }
             }
         },
-        "sort": [{"published_time": {"order": "desc"}}]
+        #"sort": [{"published_time": {"order": "desc"}}]
     }
 
     # Execute the query

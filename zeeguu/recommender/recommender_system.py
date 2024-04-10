@@ -95,7 +95,7 @@ class RecommenderSystem:
             print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
             top_ten = df.sort_values([score_key], ascending=False).head(10)['article_id'].values
-            articles_to_recommend = find_articles_like(top_ten,5,250, language_id)
+            articles_to_recommend = find_articles_like(top_ten,5,30, language_id)
             print("this is what elastic thinks \n")
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)
