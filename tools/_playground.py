@@ -53,7 +53,7 @@ sessions_df = matrix.liked_sessions_df
 if test:
     recommender = RecommenderSystem(sessions_df, mapper=mapper,num_users=1000, num_items=1000, generator_function=setup_sessions_4_categories_with_noise)
 else:
-    recommender = RecommenderSystem(sessions=None, num_users=num_users, num_items=num_items, mapper=mapper)
+    recommender = RecommenderSystem(sessions=sessions_df, num_users=num_users, num_items=num_items, mapper=mapper)
 print("Time to set up recommender: ", time.time() - start)
 
 
