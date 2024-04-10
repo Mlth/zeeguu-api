@@ -4,7 +4,7 @@ include .env
 export
 
 # Define variables
-SQL_FILE := zeeguu-anonymized-24-03-01.sql
+SQL_FILE := zeeguu_db_anon_2024-04-04.sql
 DOCKER_CONTAINER := zeeguu-mysql
 
 # Define targets

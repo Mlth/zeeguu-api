@@ -136,10 +136,8 @@ class FeedbackMatrix:
             self.config.adjustment_config = AdjustmentConfig(difficulty_weight=self.default_difficulty_weight, translation_adjustment_value=self.default_translation_adjustment_value)
 
         user_language_levels = get_all_user_language_levels()
-        #print(f"user language {user_language_levels} ")
        
         for session in sessions.keys():
-            #sessions[session].session_duration = self.get_translation_adjustment(sessions[session], self.config.adjustment_config.translation_adjustment_value)
             if (sessions[session].user_id, sessions[session].article_id) in translate_data:
                 sessions[session].session_duration -= translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
 
@@ -150,7 +148,7 @@ class FeedbackMatrix:
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
 
-            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
+            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or sessions[session].liked == 1:
                 have_read_sessions += 1
                 sessions[session].expected_read = 1
                 liked_sessions.append(sessions[session])

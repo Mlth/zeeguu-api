@@ -11,6 +11,7 @@ tf = import_tf()
 embeddings_path = "./zeeguu/recommender/embeddings/"
 user_embeddings_path = f"{embeddings_path}user_embedding.npy"
 article_embeddings_path = f"{embeddings_path}article_embedding.npy"
+mappings_path = "./zeeguu/recommender/mappings/"
 
 class Measure(Enum):
     # If no ShowData is chosen, all data will be retrieved and shown.
@@ -96,3 +97,15 @@ def save_embeddings(embeddings):
 
   with open(embeddings_path + "article_embedding.npy", 'wb' ) as f:
     np.save(f, article_em)
+    
+def remove_saved_embeddings_and_mappings():
+  __remove_files(embeddings_path)
+  __remove_files(mappings_path)
+  
+def __remove_files(folder_path):
+  if os.path.exists(folder_path):
+    for file in os.listdir(folder_path):
+      os.remove(folder_path + file)
+    print(f"Files in '{folder_path}' removed successfully.")
+  else:
+    print(f"Folder '{folder_path}' does not exist.")

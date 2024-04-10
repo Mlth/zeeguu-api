@@ -4,8 +4,8 @@ from pandas import DataFrame
 from zeeguu.core.model.article import Article
 from zeeguu.core.model.user import User
 import pickle
+from zeeguu.recommender.utils.train_utils import mappings_path
 
-mappings_path = "./zeeguu/recommender/mappings/"
 user_order_to_id_path = f"{mappings_path}user_order_mapping.pkl"
 user_id_to_order_path = f"{mappings_path}user_id_mapping.pkl"
 article_order_to_id_path = f"{mappings_path}article_order_mapping.pkl"
@@ -40,6 +40,8 @@ class Mapper:
                 index += 1
             self.num_articles = index
 
+            if not (os.path.exists(mappings_path)):
+                os.makedirs(mappings_path)
             with open(article_order_to_id_path, 'wb') as f:
                 pickle.dump(self.article_order_to_id, f)
             with open(article_id_to_order_path, 'wb') as f:
@@ -59,7 +61,8 @@ class Mapper:
                 self.user_order_to_id[index] = user.id
                 self.user_id_to_order[user.id] = index
                 index += 1
-            self.num_of_users = index
+            self.num_users = index
+            
             if not (os.path.exists(mappings_path)):
                 os.makedirs(mappings_path)
             with open(user_order_to_id_path, 'wb') as f:

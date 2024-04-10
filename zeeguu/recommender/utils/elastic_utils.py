@@ -67,12 +67,12 @@ def initial_candidate_pool() -> 'list[Article]':
 
 
 
-def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, article_age: int) -> 'list[Article]':
+def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, article_age: int, language_id: int) -> 'list[Article]':
     es = Elasticsearch(ES_CONN_STRING)
     fields = ["language", "content", "title"]
-
+    language = Language.find_by_id(language_id)
     like_documents = [
-        {"_index": ES_ZINDEX, "_id": str(doc_id)} for doc_id in recommended_articles_ids
+        {"_index": ES_ZINDEX, "_id": str(doc_id) } for doc_id in recommended_articles_ids
     ]
 
     cutoff_date = datetime.now() - timedelta(days=article_age)
@@ -80,6 +80,9 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
     mlt_query = {
         "query": {
             "bool": {
+                "must": [
+                    {'match': {'language': language.name}}
+                ],
                 "should": {  
                     "more_like_this": {
                         "fields": fields,

@@ -60,7 +60,10 @@ class RecommenderSystem:
         return scores
     
     def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool =False, k=None):
-        user_order = self.mapper.user_id_to_order.get(user_id)
+        if self.test:
+            user_order = user_id
+        else:
+            user_order = self.mapper.user_id_to_order.get(user_id)
         user_likes = self.sessions[self.sessions["user_id"] == user_order]['article_id'].values
         print(f"User likes: {user_likes}")
 
@@ -92,7 +95,7 @@ class RecommenderSystem:
             print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
             top_ten = df.sort_values([score_key], ascending=False).head(10)['article_id'].values
-            articles_to_recommend = find_articles_like(top_ten,5,130)
+            articles_to_recommend = find_articles_like(top_ten,5,250, language_id)
             print("this is what elastic thinks \n")
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)
