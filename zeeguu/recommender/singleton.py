@@ -21,7 +21,7 @@ class Singleton:
         num_users = mapper.num_users
         num_items = mapper.num_articles
 
-        matrix_config = feedback_matrix.FeedbackMatrixConfig(
+        """ matrix_config = feedback_matrix.FeedbackMatrixConfig(
             show_data=[],
             data_since=datetime.now() - timedelta(days=130), # accurate_duration_date
             adjustment_config=feedback_matrix.AdjustmentConfig(
@@ -30,9 +30,9 @@ class Singleton:
             ),
             test_tensor=test
         )
+        """
+        #matrix = feedback_matrix.FeedbackMatrix(matrix_config, mapper, num_users=num_users, num_articles=num_items)
 
-        matrix = feedback_matrix.FeedbackMatrix(matrix_config, mapper, num_users=num_users, num_articles=num_items)
+        #matrix.generate_dfs()
 
-        matrix.generate_dfs()
-
-        return RecommenderSystem(matrix.liked_sessions_df, mapper=mapper,num_users=num_users, num_items=num_items)
+        return RecommenderSystem(None, mapper=mapper,num_users=num_users, num_items=num_items)

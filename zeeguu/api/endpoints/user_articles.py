@@ -42,8 +42,13 @@ def user_articles_cfmodel():
     print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
     article_infos = []
     rec = Singleton().makeRecommender()
-    article_infos = [UserArticle.user_article_info(flask.g.user, a) for a in rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)]
+    try:
+        articles = rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+    except:
+        articles = []
 
+    article_infos = [UserArticle.user_article_info(flask.g.user, a) for a in articles]
+    
     return json_result(article_infos)
 
 
