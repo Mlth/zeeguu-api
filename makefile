@@ -13,7 +13,7 @@ DOCKER_CONTAINER := zeeguu-mysql
 #Rebuilds all docker images for you 
 init:
 	@echo "Building all docker images"
-	@docker build -f Dockerfile.development -t zeeguu_api_dev .
+	@docker build -f Dockerfile.development -t zeeguu/api .
 	@docker run --name=$(DOCKER_CONTAINER) -p 8080:3306 -d zeeguu/${DOCKER_CONTAINER}
 	
 #this looks for a file called zeeguu-anonymized-zeeguu_test-202401300908.sql and copies it to the mysql container and runs it
