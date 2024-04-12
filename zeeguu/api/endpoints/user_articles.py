@@ -41,7 +41,9 @@ def user_articles_cfmodel():
     
     print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
     article_infos = []
-    rec = Singleton().get_recommender_system()
+    #rec = recommender.get_recommender()
+
+    rec = Singleton().get_recommender()
     try:
         articles = rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
     except:

@@ -28,6 +28,8 @@ class RecommenderSystem:
         generator_function: Callable=None, #function type
         stddev=0.1,
     ):
+        print("hotdogs _________-------____HARAM")
+        
         self.mapper = mapper
         self.test=generator_function is not None
         if(self.test):
@@ -97,7 +99,9 @@ class RecommenderSystem:
             if not self.test:
                 df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
             df = df.iloc[df[score_key].apply(lambda x: abs(x - 1)).argsort()]
+            print("THIS IS BEFORE DISPLAY")
             display.display(df.head(len(df) if k is None else k))
+            print("THIS IS AFTER DISPLAY")
 
             top_results = df.head(10)
 
