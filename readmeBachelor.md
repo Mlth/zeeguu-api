@@ -22,29 +22,28 @@ Run these commands to populate the database
 docker cp <name_of_db_dump> zeeguu-mysql:<name_of_db_dump>
 ```
 
-3. Enter docker interactive env:
+2. Enter docker interactive env:
 ```
 docker exec -it zeeguu-mysql /bin/bash
 ```
-4. Open mysql:
+3. Open mysql:
 ```
 mysql -u zeeguu_test -p zeeguu_test
 ```
-6. Enter password:
+4. Enter password:
 ```
 zeeguu_test
 ```
-7. Choose which db to copy to
+5. Choose which db to copy to
 ```
 USE zeeguu_test
 ```
-8. Give which source to copy from:
+6. Give which source to copy from:
 ```
 source <name_of_db_dump>
 ```
-This is gonna take a while, let it run.
-7. ????
-8. Profit
+It's going to take a while, let it run..
+
 
 **Migrations**
 docker cp <name_of_migration> zeeguu-mysql:<name_of_migration>
