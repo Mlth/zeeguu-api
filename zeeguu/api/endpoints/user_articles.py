@@ -2,11 +2,10 @@ import flask
 
 from zeeguu.core.content_recommender import article_recommendations_for_user, topic_filter_for_user
 from zeeguu.core.model import UserArticle, Article, PersonalCopy
-from zeeguu.recommender import RecommenderSystemSingleton as Singleton
-
 from zeeguu.api.utils.route_wrappers import cross_domain, with_session
 from zeeguu.api.utils.json_result import json_result
 from . import api
+from zeeguu.recommender import rec
 
 from flask import request
 
@@ -42,10 +41,10 @@ def user_articles_cfmodel():
     print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
     article_infos = []
     #rec = recommender.get_recommender()
-
-    rec = Singleton().get_recommender()
+    #rec = app.rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+    
     try:
-        articles = rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+        articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
     except:
         articles = []
 
