@@ -16,21 +16,27 @@ Run this after to create the container
 
 Run these commands to populate the database
 
-docker cp zeeguu-anonymized-zeeguu_test-202401300908.sql zeeguu-mysql:zeeguu-anonymized-zeeguu_test-202401300908.sql
-
 **NEW VERSION OF DB AVAILABLE** 
+1. Run this in wsl, remember to have the db_dump in the same folder that you are running this command from:
+  docker cp <name_of_db_dump> zeeguu-mysql:<name_of_db_dump>
 
-docker cp zeeguu-anonymized-24-03-01.sql zeeguu-mysql:zeeguu-anonymized-24-03-01.sql
+2. Enter docker interactive env:
+  docker exec -it zeeguu-mysql /bin/bash
 
-docker exec -it zeeguu-mysql /bin/bash
+3. Open mysql:
+  mysql -u zeeguu_test -p zeeguu_test
 
-mysql -u zeeguu_test -p zeeguu_test
-
+4. Enter password:
 zeeguu_test
 
-USE zeeguu_test
+5. Choose which db to copy to
+  USE zeeguu_test
+6. Give which source to copy from:
+  source <name_of_db_dump>
 
-source zeeguu-anonymized-24-03-01.sql
+This is gonna take a while, let it run.
+7. ????
+8. Profit
 
 **Migrations**
 docker cp <name_of_migration> zeeguu-mysql:<name_of_migration>
