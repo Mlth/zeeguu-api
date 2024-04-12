@@ -48,7 +48,7 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
                                         {"gauss": {
                                             "published_time": {
                                                 "origin": "now",
-                                                "scale": "7d", 
+                                                "scale": "14d", 
                                                 "decay": 0.2    
                                             }
                                         }}

@@ -27,9 +27,7 @@ class RecommenderSystem:
         embedding_dim : int =20,
         generator_function: Callable=None, #function type
         stddev=0.1,
-    ):
-        print("hotdogs _________-------____HARAM")
-        
+    ):        
         self.mapper = mapper
         self.test=generator_function is not None
         if(self.test):
@@ -109,7 +107,7 @@ class RecommenderSystem:
             #print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
             top_ten = top_results['article_id'].values
-            articles_to_recommend = find_articles_like(top_ten,5,15, language_id)
+            articles_to_recommend = find_articles_like(top_ten,5,30, language_id)
             print("this is what elastic thinks \n")
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)
