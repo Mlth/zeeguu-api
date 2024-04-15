@@ -52,6 +52,17 @@ def user_articles_cfmodel():
     
     return json_result(article_infos)
 
+@api.route("/user_articles/saved", methods=["GET"])
+@cross_domain
+@with_session
+def saved_articles():
+    saves = PersonalCopy.all_for(flask.g.user)
+
+    article_infos = [
+        UserArticle.user_article_info(flask.g.user, e) for e in saves
+    ]
+
+    return json_result(article_infos)
 
 # ---------------------------------------------------------------------------
 @api.route("/user_articles/topic_filtered", methods=("POST",))
