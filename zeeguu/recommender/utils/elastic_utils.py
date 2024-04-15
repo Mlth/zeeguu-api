@@ -49,7 +49,7 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
                                             "published_time": {
                                                 "origin": "now",
                                                 "scale": "14d", 
-                                                "decay": 0.2    
+                                                "decay": 0.2
                                             }
                                         }}
                                     ],
@@ -64,4 +64,6 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
     }
 
     res = es.search(index=ES_ZINDEX, body=mlt_query, size=limit)
-    return _to_articles_from_ES_hits(res["hits"]["hits"])
+    articles = _to_articles_from_ES_hits(res["hits"]["hits"])
+    articles = [a for a in articles if a.broken == 0]
+    return articles
