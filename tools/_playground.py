@@ -59,16 +59,16 @@ print("Time to set up recommender: ", time.time() - start)
 
 
 start = time.time()
-recommender.cf_model.train_model(num_iterations=10000, learning_rate=0.1)
+recommender.cf_model.train_model(num_iterations=5, learning_rate=0.1)
 print("Time to train model: ", time.time() - start)
 
 
 start = time.time()
 
-""" if(test):
+if(test):
     recommender.user_recommendations(user_id=1, language_id=1)
 else:
-    recommender.user_recommendations(user_id=1911, language_id=9) """
+    recommender.user_recommendations(user_id=1911, language_id=9)
 
 print("Time to get recommendations: ", time.time() - start)
 

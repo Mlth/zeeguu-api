@@ -97,17 +97,13 @@ class RecommenderSystem:
             if not self.test:
                 df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
             df = df.iloc[df[score_key].apply(lambda x: abs(x - 1)).argsort()]
-            print("THIS IS BEFORE DISPLAY")
             display.display(df.head(len(df) if k is None else k))
-            print("THIS IS AFTER DISPLAY")
-
-            top_results = df.head(10)
 
             #top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in top_results['article_id'].values]
             #print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
-            top_ten = top_results['article_id'].values
-            articles_to_recommend = find_articles_like(top_ten,5,30, language_id)
+            top_results = df.head(20)['article_id'].values
+            articles_to_recommend = find_articles_like(top_results, 20, 50, language_id)
             print("this is what elastic thinks \n")
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)
