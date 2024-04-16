@@ -7,7 +7,7 @@ from zeeguu.core.content_recommender.elastic_recommender import _to_articles_fro
 
 def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, article_age: int, language_id: int) -> 'list[Article]':
     es = Elasticsearch(ES_CONN_STRING)
-    fields = ["language", "content", "title"]
+    fields = ["content", "title"]
     language = Language.find_by_id(language_id)
     like_documents = [
         {"_index": ES_ZINDEX, "_id": str(doc_id) } for doc_id in recommended_articles_ids
