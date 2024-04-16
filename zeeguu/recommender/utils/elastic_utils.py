@@ -14,51 +14,52 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
     ]
 
     cutoff_date = datetime.now() - timedelta(days=article_age)
+    testing_date = datetime.strptime("2024-04-04 12:00:00", "%Y-%m-%d %H:%M:%S")
 
     mlt_query = {
         "query": {
-            "bool": {
-                "must": [
-                    {'match': {'language': language.name}}
-                ],
-                "should": {
-                    "more_like_this": {
-                        "fields": fields,
-                        "like": like_documents,
-                        "min_term_freq": 2,
-                        "max_query_terms": 25,
-                        "min_doc_freq": 5,
-                        "min_word_length": 3
-                    }
-                },
-                "filter": {
+            "function_score": {
+                "query": {
                     "bool": {
                         "must": [
-                            {
-                                "range": {
-                                    "published_time": {
-                                        "gte": cutoff_date.strftime('%Y-%m-%dT%H:%M:%S'),
-                                        "lte": "now"
-                                    }
-                                }
-                            },
-                            {
-                                "function_score": {
-                                    "functions": [
-                                        {"gauss": {
-                                            "published_time": {
-                                                "origin": "now",
-                                                "scale": "14d", 
-                                                "decay": 0.2
-                                            }
-                                        }}
-                                    ],
-                                    "score_mode": "sum"
-                                }
+                            {'match': {'language': language.name}}
+                        ],
+                        "should": {
+                            "more_like_this": {
+                                "fields": fields,
+                                "like": like_documents,
+                                "min_term_freq": 2,
+                                "max_query_terms": 25,
+                                "min_doc_freq": 5,
+                                "min_word_length": 3
                             }
-                        ]
+                        },
+                        "filter": {
+                            "bool": {
+                                "must": [
+                                    {
+                                        "range": {
+                                            "published_time": {
+                                                "gte": cutoff_date.strftime('%Y-%m-%dT%H:%M:%S'),
+                                                "lte": "now"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
                     }
-                }
+                }, "functions": [
+                        {"gauss": {
+                            "published_time": {
+                                "origin": testing_date,
+                                "scale": "10d",
+                                "offset": "4h",
+                                "decay": 0.9
+                            }
+                        }}
+                ],
+                "score_mode": "sum"
             }
         }
     }
