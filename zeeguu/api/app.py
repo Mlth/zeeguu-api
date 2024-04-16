@@ -62,7 +62,7 @@ def create_app(testing=False):
     # inspired from: https://stackoverflow.com/a/47278172/1200070
 
     from zeeguu.core.model import db
-
+    from zeeguu.recommender import rec
     db.init_app(app)
 
     # Creating the DB tables if needed
@@ -70,10 +70,14 @@ def create_app(testing=False):
     # And they are loaded above, in the import db... which implicitly loads the model package
     with app.app_context():
         db.create_all()
+        rec.get_recommender()
+        
+
 
     from .endpoints import api
 
     app.register_blueprint(api)
+
 
     # We're saving the zeeguu.core.app so we can refer to the config from deep in the code...
     zeeguu.core.app = app

@@ -2,10 +2,10 @@ import flask
 
 from zeeguu.core.content_recommender import article_recommendations_for_user, topic_filter_for_user
 from zeeguu.core.model import UserArticle, Article, PersonalCopy
-
 from zeeguu.api.utils.route_wrappers import cross_domain, with_session
 from zeeguu.api.utils.json_result import json_result
 from . import api
+from zeeguu.recommender import rec
 
 from flask import request
 
@@ -33,6 +33,24 @@ def user_articles_recommended(count: int = 20):
 
     return json_result(article_infos)
 
+@api.route("/user_articles/cfmodel", methods=("GET",))
+@cross_domain
+@with_session
+def user_articles_cfmodel():
+    
+    print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
+    article_infos = []
+    #rec = recommender.get_recommender()
+    #rec = app.rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+    
+    try:
+        articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+    except:
+        articles = []
+
+    article_infos = [UserArticle.user_article_info(flask.g.user, a) for a in articles]
+    
+    return json_result(article_infos)
 
 @api.route("/user_articles/saved", methods=["GET"])
 @cross_domain
@@ -45,7 +63,6 @@ def saved_articles():
     ]
 
     return json_result(article_infos)
-
 
 # ---------------------------------------------------------------------------
 @api.route("/user_articles/topic_filtered", methods=("POST",))

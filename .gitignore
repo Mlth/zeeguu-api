@@ -36,3 +36,4 @@ zeeguu-anonymized-*
 zeeguu/recommender/resources/*
 zeeguu/recommender/embeddings/*
 zeeguu/recommender/mappings/*
+zeeguu_db*.sql

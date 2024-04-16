@@ -51,7 +51,7 @@ def create_or_update(article, session):
     return res
 
 def index_all_articles_helper(session):
-    articles_to_index = Article.all_older_than(0)
+    articles_to_index = Article.all_younger_than(0)
     for article in articles_to_index:
          doc = document_from_article(article, session)
          yield {
