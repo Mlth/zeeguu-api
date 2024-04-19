@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from elasticsearch_dsl import Search, Q, SF
 
 
@@ -26,6 +27,7 @@ def build_elastic_recommender_query(
         language,
         upper_bounds,
         lower_bounds,
+        old,
         es_scale="30d",
         es_offset="1d",
         es_decay=0.5,
@@ -104,7 +106,29 @@ def build_elastic_recommender_query(
         bool_query_body["query"]["bool"].update(
             {
                 "filter": {
-                    "range": {"fk_difficulty": {"gt": lower_bounds, "lt": upper_bounds}}
+                    "range": {"fk_difficulty": {"gt": lower_bounds, "lt": upper_bounds}},
+                }
+            }
+        )
+    
+    print("old:", old)
+
+    if old:
+        bool_query_body["query"]["bool"].update(
+            {
+                "filter": {
+                    "bool": {
+                        "must": [
+                            {
+                                "range": {
+                                    "published_time": {
+                                        "gte": (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%S'),
+                                        "lte": (datetime.now() - timedelta(days=21)).strftime('%Y-%m-%dT%H:%M:%S')
+                                    }
+                                }
+                            }
+                        ]
+                    }
                 }
             }
         )

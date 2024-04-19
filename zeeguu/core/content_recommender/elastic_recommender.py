@@ -85,6 +85,7 @@ def _prepare_user_constraints(user):
 def article_recommendations_for_user(
         user,
         count,
+        old,
         es_scale="30d",
         es_offset="1d",
         es_decay=0.6,
@@ -123,6 +124,7 @@ def article_recommendations_for_user(
         language,
         upper_bounds,
         lower_bounds,
+        old,
         es_scale,
         es_offset,
         es_decay,
