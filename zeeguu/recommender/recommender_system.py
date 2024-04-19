@@ -1,6 +1,8 @@
 from enum import Enum
 import os
 import numpy as np
+from zeeguu.core.model.article import Article
+from zeeguu.core.model.user_article import UserArticle
 from zeeguu.recommender.cf_model import CFModel
 from zeeguu.recommender.mapper import Mapper
 from zeeguu.recommender.utils.tensor_utils import build_liked_sparse_tensor
@@ -59,7 +61,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool =False, k=None):
+    def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool =False, k=None, more_like_this=True):
         if self.test:
             user_order = user_id
         else:
@@ -103,15 +105,33 @@ class RecommenderSystem:
             #print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
             top_results = df.head(20)['article_id'].values
-            articles_to_recommend = find_articles_like(top_results, 20, 50, language_id)
-            print("this is what elastic thinks \n")
+            articles_to_recommend = []
+            if more_like_this:
+                articles_to_recommend = find_articles_like(top_results, 20, 50, language_id)
+                print("this is what elastic thinks \n")
+            else:
+                for article_id in top_results:
+                    articles_to_recommend.append(Article.find_by_id(article_id))
             for article in articles_to_recommend:
                 print(article.title, article.language, article.published_time)
             return articles_to_recommend
         else:
             # Possibly do elastic stuff to just give some random recommendations
             return
+
+    def previous_likes(self, user_id: int, language_id: int):
+        list_of_likes = UserArticle.all_liked_articles_of_user(user_id)
         
+        for article in list_of_likes:
+            if article.language_id == language_id:
+                user_likes = article.article_id
+
+        for id in user_likes:
+            articles_to_recommend = find_articles_like(id, 20, 50, language_id)
+        return articles_to_recommend
+        
+
+
     def article_neighbors(self, article_id, measure=Measure.DOT, k=10):
         scores = self.compute_scores(
             self.cf_model.embeddings["article_id"][article_id], self.cf_model.embeddings["article_id"],

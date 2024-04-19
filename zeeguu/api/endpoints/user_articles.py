@@ -35,17 +35,24 @@ def user_articles_recommended(count: int = 50, old: str = 'False'):
     return json_result(article_infos)
 
 @api.route("/user_articles/cfmodel", methods=("GET",))
+@api.route("/user_articles/cfmodel/<string:mode>", methods=("GET",))
 @cross_domain
 @with_session
-def user_articles_cfmodel():
+def user_articles_cfmodel(mode : str ):
+    
     
     print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
     article_infos = []
     #rec = recommender.get_recommender()
     #rec = app.rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
-    
     try:
-        articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+        if mode == "cf":
+            articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id, False)
+
+        elif mode == "mlt":
+            articles = rec.get_recommender().previous_likes(flask.g.user.id, flask.g.user.learned_language_id)
+        else:
+            articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
     except:
         articles = []
 
