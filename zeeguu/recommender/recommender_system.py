@@ -120,14 +120,30 @@ class RecommenderSystem:
             return
 
     def previous_likes(self, user_id: int, language_id: int):
-        list_of_likes = UserArticle.all_liked_articles_of_user(user_id)
-        
-        for article in list_of_likes:
-            if article.language_id == language_id:
-                user_likes = article.article_id
 
-        for id in user_likes:
-            articles_to_recommend = find_articles_like(id, 20, 50, language_id)
+        #print("Inside previous likes")
+        #print(f"User: {user_id}, Language: {language_id}")
+        
+        query = (
+            UserArticle.query
+            .filter(UserArticle.user_id == user_id)
+            .filter(UserArticle.liked.isnot(False))
+            .all()
+        )
+        #.join(Article, UserArticle.article_id == Article.id)
+        
+        print(query)
+        user_likes = []
+        for article in query:
+            print("inside the for loop:")
+            print(article.article_id)
+            print(article.article.language_id)
+            if article.article.language_id == language_id:
+                user_likes.append(article.article_id)
+        
+        #print("User likes: ", user_likes)
+        
+        articles_to_recommend = find_articles_like(user_likes, 20, 50, language_id)
         return articles_to_recommend
         
 

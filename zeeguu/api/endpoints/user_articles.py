@@ -38,21 +38,27 @@ def user_articles_recommended(count: int = 50, old: str = 'False'):
 @api.route("/user_articles/cfmodel/<string:mode>", methods=("GET",))
 @cross_domain
 @with_session
-def user_articles_cfmodel(mode : str ):
+def user_articles_cfmodel(mode : str = "" ):
     
     
     print(f"CFModel, user: {flask.g.user.id} Language: {flask.g.user.learned_language_id}")
     article_infos = []
+    print(mode)
     #rec = recommender.get_recommender()
     #rec = app.rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
     try:
         if mode == "cf":
             articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id, False)
-
+            #print(mode)
+            print("Sending CF recommendations")
         elif mode == "mlt":
             articles = rec.get_recommender().previous_likes(flask.g.user.id, flask.g.user.learned_language_id)
+            #print(mode)
+            print("Sending MLT recommendations")
         else:
             articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
+            print("Sending NORMAL recommendations")
+            
     except:
         articles = []
 
