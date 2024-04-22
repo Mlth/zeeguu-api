@@ -101,19 +101,23 @@ class RecommenderSystem:
             df = df.iloc[df[score_key].apply(lambda x: abs(x - 1)).argsort()]
             display.display(df.head(len(df) if k is None else k))
 
-            #top_recommendations_with_total_likes = [f"{l}: {len(self.sessions[self.sessions['article_id'] == l]['article_id'].values)}" for l in top_results['article_id'].values]
-            #print(f"Total likes for top recommendations: {top_recommendations_with_total_likes}")
             
+            own_likes = UserArticle.all_liked_articles_of_user_by_id(user_id)
+            list_of_own_likes = [id.article.id for id in own_likes]
+            top_results = df[~df['article_id'].isin(list_of_own_likes)]
             top_results = df.head(20)['article_id'].values
+
             articles_to_recommend = []
             if more_like_this:
                 articles_to_recommend = find_articles_like(top_results, 20, 50, language_id)
-                print("this is what elastic thinks \n")
+                #print("this is what elastic thinks \n")
             else:
+                #print("This is cf")
                 for article_id in top_results:
+                    
                     articles_to_recommend.append(Article.find_by_id(article_id))
-            for article in articles_to_recommend:
-                print(article.title, article.language, article.published_time)
+            """ for article in articles_to_recommend:
+                print(article.title, article.language, article.published_time) """
             return articles_to_recommend
         else:
             # Possibly do elastic stuff to just give some random recommendations
@@ -121,27 +125,12 @@ class RecommenderSystem:
 
     def previous_likes(self, user_id: int, language_id: int):
 
-        #print("Inside previous likes")
-        #print(f"User: {user_id}, Language: {language_id}")
+        query = UserArticle.all_liked_articles_of_user_by_id(user_id)
         
-        query = (
-            UserArticle.query
-            .filter(UserArticle.user_id == user_id)
-            .filter(UserArticle.liked.isnot(False))
-            .all()
-        )
-        #.join(Article, UserArticle.article_id == Article.id)
-        
-        print(query)
         user_likes = []
         for article in query:
-            print("inside the for loop:")
-            print(article.article_id)
-            print(article.article.language_id)
             if article.article.language_id == language_id:
                 user_likes.append(article.article_id)
-        
-        #print("User likes: ", user_likes)
         
         articles_to_recommend = find_articles_like(user_likes, 20, 50, language_id)
         return articles_to_recommend

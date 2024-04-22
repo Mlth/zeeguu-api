@@ -48,7 +48,7 @@ def user_articles_cfmodel(mode : str = "" ):
     #rec = app.rec.user_recommendations(flask.g.user.id, flask.g.user.learned_language_id)
     try:
         if mode == "cf":
-            articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id, False)
+            articles = rec.get_recommender().user_recommendations(flask.g.user.id, flask.g.user.learned_language_id, more_like_this=False)
             #print(mode)
             print("Sending CF recommendations")
         elif mode == "mlt":
