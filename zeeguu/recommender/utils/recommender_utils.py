@@ -128,22 +128,21 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
             .join(User, User.id == UserReadingSession.user_id)
             .join(Article, Article.id == UserReadingSession.article_id)
             .filter(Article.broken == 0)
-            .filter(User.is_dev == False)
+            .filter(User.is_dev != True)
             .filter(UserReadingSession.article_id.isnot(None))
-            .filter(UserReadingSession.duration >= 30000) # 30 seconds
-            .filter(UserReadingSession.duration <= 3600000) # 1 hour
+            #.filter(UserReadingSession.duration >= 30000) # 30 seconds
+            #.filter(UserReadingSession.duration <= 3600000) # 1 hour
             .order_by(UserReadingSession.user_id.asc())
     )
     if data_since:
         query = query.filter(UserReadingSession.start_time >= data_since)
 
     if ShowData.LIKED in show_data:
-        liked_dict = get_all_user_article_information(data_since)
+        liked_dict = get_user_article_information(data_since)
     if ShowData.RATED_DIFFICULTY in show_data:
         feedback_dict = get_all_article_difficulty_feedback(data_since)
 
-    
-    return query, liked_dict, feedback_dict 
+    return query.all(), liked_dict, feedback_dict 
 
 def get_sum_of_translation_from_user_activity_data(data_since: datetime):
     count_dict = {}
@@ -153,8 +152,7 @@ def get_sum_of_translation_from_user_activity_data(data_since: datetime):
     )
     if data_since:
         query = query.filter(UserActivityData.time >= data_since)
-
-    for row in query:
+    for row in query.all():
         if (row.user_id, row.article_id) not in count_dict:
             count_dict[(row.user_id, row.article_id)] = {
                 'count': 1,
@@ -164,20 +162,18 @@ def get_sum_of_translation_from_user_activity_data(data_since: datetime):
     
     return count_dict
 
-def get_all_user_article_information(data_since: datetime):
-
+def get_user_article_information(data_since: datetime):
     liked_dict = {}
     query = (
         UserArticle.query
             .filter(UserArticle.opened.isnot(None))
+            .filter(UserArticle.liked == True)
     )
     if data_since:
         query = query.filter(UserArticle.opened >= data_since)
-    for row in query:
-        if (row.user_id, row.article_id) not in liked_dict:
-            liked_dict[(row.user_id, row.article_id)] = { 'liked': int(row.liked) }
-        else:
-            liked_dict[(row.user_id, row.article_id)]['liked'] = row.liked
+    
+    for row in query.all():
+        liked_dict[(row.user_id, row.article_id)] = 1
 
     return liked_dict
 
@@ -189,11 +185,11 @@ def get_all_article_difficulty_feedback(data_since: datetime):
     )
     if data_since:
         query = query.filter(ArticleDifficultyFeedback.date >= data_since)
-    for row in query:
+    for row in query.all():
         if (row.user_id, row.article_id) not in feedback_dict:
-            feedback_dict[(row.user_id, row.article_id)] = { 'difficulty_feedback': row.difficulty_feedback }
+            feedback_dict[(row.user_id, row.article_id)] = row.difficulty_feedback
         else:
-            feedback_dict[(row.user_id, row.article_id)]['difficulty_feedback'] = row.difficulty_feedback
+            feedback_dict[(row.user_id, row.article_id)] = row.difficulty_feedback
 
     return feedback_dict
 
@@ -203,7 +199,7 @@ def get_all_user_language_levels():
         UserLanguage.query
             .filter(UserLanguage.cefr_level.isnot(None))
     )
-    for row in query:
+    for row in query.all():
         if (row.user_id, row.language_id) not in user_level_dict:
             user_level_dict[(row.user_id, row.language_id)] = { 'cefr_level': row.cefr_level }
         else:

@@ -5,7 +5,7 @@ from zeeguu.core.model.user_activitiy_data import UserActivityData
 from zeeguu.core.model.user_article import UserArticle
 from zeeguu.recommender.mapper import Mapper
 from zeeguu.recommender.utils.tensor_utils import build_liked_sparse_tensor
-from zeeguu.recommender.utils.recommender_utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions, get_sum_of_translation_from_user_activity_data, get_all_user_article_information, get_all_article_difficulty_feedback, get_all_user_language_levels
+from zeeguu.recommender.utils.recommender_utils import get_expected_reading_time, lower_bound_reading_speed, upper_bound_reading_speed, ShowData, get_difficulty_adjustment, get_user_reading_sessions, get_sum_of_translation_from_user_activity_data, get_all_user_language_levels
 from datetime import datetime
 import pandas as pd
 from collections import Counter
@@ -72,10 +72,6 @@ class FeedbackMatrix:
         print("Getting sessions")
         sessions: dict[tuple[int, int], FeedbackMatrixSession] = {}
         query_data, liked_data, difficulty_feedback_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
-        
-        """ query_data = get_user_reading_sessions(self.config.data_since, self.config.show_data)
-        liked_data = get_all_user_article_information(self.config.data_since)
-        difficulty_feedback_data = get_all_article_difficulty_feedback(self.config.data_since) """
 
         for session in query_data:
             article_id = session.article_id
@@ -83,18 +79,16 @@ class FeedbackMatrix:
             article = session.article
             session_duration = int(session.duration) / 1000 # in seconds
             if (user_id, article_id) in liked_data:
-                liked_value = liked_data[(user_id, article_id)]['liked']
+                liked_value = liked_data[(user_id, article_id)]
             else:
                 liked_value = 0
-            #liked = UserArticle.query.filter_by(user_id=user_id, article_id=article_id).with_entities(UserArticle.liked).first()
             
-            #difficulty_feedback = ArticleDifficultyFeedback.query.filter_by(user_id=user_id, article_id=article_id).with_entities(ArticleDifficultyFeedback.difficulty_feedback).first()
             if (user_id, article_id) in difficulty_feedback_data:
-                difficulty_feedback = difficulty_feedback_data[(user_id, article_id)]['difficulty_feedback']
+                difficulty_feedback = difficulty_feedback_data[(user_id, article_id)]
             else:
                 difficulty_feedback = 0
-            difficulty_feedback_value = difficulty_feedback #0 if difficulty_feedback is None else int(difficulty_feedback[0])
-            if difficulty_feedback_value != 0:
+            
+            if difficulty_feedback != 0:
                 self.feedback_counter += 1
             article_topic = article.topics
             article_topic_list = []
@@ -103,7 +97,7 @@ class FeedbackMatrix:
                     article_topic_list.append(topic.title)
 
             if (user_id, article_id) not in sessions:
-                sessions[(user_id, article_id)] = self.create_feedback_matrix_session(session, article, session_duration, liked_value, difficulty_feedback_value, article_topic_list)
+                sessions[(user_id, article_id)] = self.create_feedback_matrix_session(session, article, session_duration, liked_value, difficulty_feedback, article_topic_list)
             else:
                 sessions[(user_id, article_id)].session_duration += session_duration
 
@@ -112,17 +106,17 @@ class FeedbackMatrix:
 
     def create_feedback_matrix_session(self, session, article, session_duration, liked_value, difficulty_feedback_value, article_topic_list):
         return FeedbackMatrixSession(
-            session.user_id,
-            session.article_id,
-            session_duration,
-            article.language_id,
-            article.fk_difficulty,
-            article.word_count,
-            article_topic_list,
-            0,
-            liked_value,
-            difficulty_feedback_value,
-            (datetime.now() - session.start_time).days,
+            user_id=session.user_id,
+            article_id=session.article_id,
+            session_duration=session_duration,
+            language_id=article.language_id,
+            difficulty=article.fk_difficulty,
+            word_count=article.word_count,
+            article_topic_list=article_topic_list,
+            expected_read=0,
+            liked=liked_value,
+            difficulty_feedback=difficulty_feedback_value,
+            days_since=(datetime.now() - session.start_time).days,
         )
     
     def get_sessions_data(self, sessions: 'dict[tuple[int, int], FeedbackMatrixSession]'):
@@ -136,7 +130,7 @@ class FeedbackMatrix:
             self.config.adjustment_config = AdjustmentConfig(difficulty_weight=self.default_difficulty_weight, translation_adjustment_value=self.default_translation_adjustment_value)
 
         user_language_levels = get_all_user_language_levels()
-       
+        
         for session in sessions.keys():
             if (sessions[session].user_id, sessions[session].article_id) in translate_data:
                 sessions[session].session_duration -= translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
@@ -148,7 +142,7 @@ class FeedbackMatrix:
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
 
-            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1 and sessions[session].user_id == 4509):
+            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1 and sessions[session].days_since < 30):
                 have_read_sessions += 1
                 sessions[session].expected_read = 1
                 liked_sessions.append(sessions[session])
