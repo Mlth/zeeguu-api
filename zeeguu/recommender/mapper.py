@@ -14,6 +14,7 @@ article_id_to_order_path = f"{mappings_path}article_id_mapping.pkl"
 class Mapper:
     num_users = 0
     num_articles = 0
+    max_article_id = None
 
     def __init__(self):
         self.user_order_to_id = {}
@@ -30,15 +31,17 @@ class Mapper:
             self.article_id_to_order = pickle.load(open(article_id_to_order_path, 'rb'))
             self.article_order_to_id = pickle.load(open(article_order_to_id_path, 'rb'))
             self.num_articles = len(self.article_order_to_id)
+            self.max_article_id = max(self.article_id_to_order.keys())
         else:
             print("No article mappings found. Building new mappings.")
-            articles = Article.query.filter(Article.broken != 1).all()
+            articles = Article.query.filter(Article.broken != 1).order_by(Article.id).all()
             index = 0
             for article in articles:
                 self.article_order_to_id[index] = article.id
                 self.article_id_to_order[article.id] = index
                 index += 1
             self.num_articles = index
+            self.max_article_id = articles[-1].id
 
             if not (os.path.exists(mappings_path)):
                 os.makedirs(mappings_path)

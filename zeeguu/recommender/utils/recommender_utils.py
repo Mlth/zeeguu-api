@@ -128,11 +128,11 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
             .join(User, User.id == UserReadingSession.user_id)
             .join(Article, Article.id == UserReadingSession.article_id)
             .filter(Article.broken == 0)
-            .filter(User.is_dev != True)
             .filter(UserReadingSession.article_id.isnot(None))
+            .order_by(UserReadingSession.user_id.asc())
+            #.filter(User.is_dev != True)
             #.filter(UserReadingSession.duration >= 30000) # 30 seconds
             #.filter(UserReadingSession.duration <= 3600000) # 1 hour
-            .order_by(UserReadingSession.user_id.asc())
     )
     if data_since:
         query = query.filter(UserReadingSession.start_time >= data_since)

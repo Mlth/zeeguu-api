@@ -1,3 +1,4 @@
+import random
 from zeeguu.core.model.article import Article
 from zeeguu.core.model.article_difficulty_feedback import ArticleDifficultyFeedback
 from zeeguu.core.model.user import User
@@ -103,7 +104,6 @@ class FeedbackMatrix:
 
         return self.get_sessions_data(sessions)
 
-
     def create_feedback_matrix_session(self, session, article, session_duration, liked_value, difficulty_feedback_value, article_topic_list):
         return FeedbackMatrixSession(
             user_id=session.user_id,
@@ -135,14 +135,13 @@ class FeedbackMatrix:
             if (sessions[session].user_id, sessions[session].article_id) in translate_data:
                 sessions[session].session_duration -= translate_data[(sessions[session].user_id, sessions[session].article_id)]['count'] * self.config.adjustment_config.translation_adjustment_value
 
-
             if (sessions[session].user_id, sessions[session].language_id) in user_language_levels:
                 sessions[session].session_duration = get_difficulty_adjustment(sessions[session], self.config.adjustment_config.difficulty_weight, user_language_levels[(sessions[session].user_id, sessions[session].language_id)]['cefr_level'])
 
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
 
-            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1 and sessions[session].days_since < 30):
+            if True: #self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1 and sessions[session].days_since < 30):
                 have_read_sessions += 1
                 sessions[session].expected_read = 1
                 liked_sessions.append(sessions[session])
@@ -150,7 +149,27 @@ class FeedbackMatrix:
             if self.duration_is_within_bounds(sessions[session].original_session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
                 sessions[session].original_expected_read = 1
         
-        return sessions, liked_sessions, have_read_sessions, feedback_diff_list
+        negative_sampling_sessions = []
+        for user_id in self.mapper.user_id_to_order.keys():
+            random_article_ids = random.sample(self.mapper.article_id_to_order.keys(), 10)
+            valid_random_article_ids = [article_id for article_id in random_article_ids if (user_id, article_id) not in sessions]
+            negative_sampling_sessions = [
+                FeedbackMatrixSession(
+                    user_id=user_id,
+                    article_id=article_id,
+                    article_topic_list=[],
+                    session_duration=0,
+                    days_since=0,
+                    liked=0,
+                    expected_read=-1,
+                    difficulty_feedback=0,
+                    language_id=0,
+                    difficulty=0,
+                    word_count=0
+                ) for article_id in valid_random_article_ids
+            ]
+
+        return sessions, liked_sessions, have_read_sessions, feedback_diff_list, negative_sampling_sessions
 
     def get_translation_adjustment(self, session: FeedbackMatrixSession, adjustment_value):
         timesTranslated = UserActivityData.translated_words_for_article(session.user_id, session.article_id)
@@ -159,16 +178,8 @@ class FeedbackMatrix:
     def duration_is_within_bounds(self, duration, lower, upper):
         return duration <= upper and duration >= lower
 
-    def sessions_to_order_sessions(self, sessions: 'list[FeedbackMatrixSession]'):
-        '''Convert user and article ids of sessions to the order defined in our maps'''
-        liked_sessions = sessions
-        for i in range(len(liked_sessions)):
-            liked_sessions[i].user_id = self.user_id_to_order.get(liked_sessions[i].user_id)
-            liked_sessions[i].article_id = self.article_id_to_order.get(liked_sessions[i].article_id)
-        return liked_sessions
-
     def generate_dfs(self):
-        sessions, liked_sessions, have_read_sessions, feedback_diff_list = self.get_sessions()
+        sessions, liked_sessions, have_read_sessions, feedback_diff_list, negative_sampling_sessions = self.get_sessions()
 
         df = self.__session_map_to_df(sessions)
         if self.config.test_tensor:
@@ -180,10 +191,17 @@ class FeedbackMatrix:
 
             liked_df = self.__session_list_to_df(liked_sessions)
 
+            for i in range(len(negative_sampling_sessions)):
+                negative_sampling_sessions[i].user_id = self.mapper.user_id_to_order.get(negative_sampling_sessions[i].user_id)
+                negative_sampling_sessions[i].article_id = self.mapper.article_id_to_order.get(negative_sampling_sessions[i].article_id)
+
+            negative_sampling_df = self.__session_list_to_df(negative_sampling_sessions)
+
         self.sessions_df = df
         self.liked_sessions_df = liked_df
         self.have_read_sessions = have_read_sessions
         self.feedback_diff_list_toprint = feedback_diff_list
+        self.negative_sampling_df = negative_sampling_df
 
     def __session_map_to_df(self, sessions: 'dict[tuple[int, int], FeedbackMatrixSession]'):
         data = {index: vars(session) for index, session in sessions.items()}

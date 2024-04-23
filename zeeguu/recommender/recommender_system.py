@@ -29,7 +29,7 @@ class RecommenderSystem:
         embedding_dim : int =20,
         generator_function: Callable=None, #function type
         stddev=0.1,
-    ):        
+    ):
         self.mapper = mapper
         self.test=generator_function is not None
         if(self.test):
@@ -61,7 +61,7 @@ class RecommenderSystem:
         scores = u.dot(V.T)
         return scores
     
-    def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool =False, k=None, more_like_this=True):
+    def user_recommendations(self, user_id: int, language_id: int, measure=Measure.DOT, exclude_read: bool=True, k=None, more_like_this=True):
         if self.test:
             user_order = user_id
         else:
@@ -75,7 +75,6 @@ class RecommenderSystem:
         user_embeddings = self.cf_model.embeddings["user_id"]
         article_embeddings = self.cf_model.embeddings["article_id"]
 
-        # TODO: Does user have (enough) interactions for us to be able to make accurate recommendations?
         should_recommend = True
         if should_recommend:
             valid_articles = self.articles[self.articles['language_id'] == language_id]
@@ -89,35 +88,37 @@ class RecommenderSystem:
                 'language_id': valid_articles['language_id'],
                 #'titles': valid_articles['title'],
             })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
-            if exclude_read:
+            '''if exclude_read:
                 # remove articles that have already been read
                 if self.sessions is not None:
                     read_articles = self.sessions[self.sessions.user_id == user_order]["article_id"].values
                 else:
                     read_articles = []
-                df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]
+                df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]'''
             if not self.test:
                 df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
+            #df = df.sort_values([score_key], ascending=False)
             df = df.iloc[df[score_key].apply(lambda x: abs(x - 1)).argsort()]
+            print("Top articles with own likes: ")
             display.display(df.head(len(df) if k is None else k))
 
-            
-            own_likes = UserArticle.all_liked_articles_of_user_by_id(user_id)
-            list_of_own_likes = [id.article.id for id in own_likes]
-            top_results = df[~df['article_id'].isin(list_of_own_likes)]
-            top_results = df.head(20)['article_id'].values
+            if exclude_read:
+                own_likes = UserArticle.all_liked_articles_of_user_by_id(user_id)
+                list_of_own_likes = [id.article.id for id in own_likes]
+                df_without_own_likes = df[~df['article_id'].isin(list_of_own_likes)]
+                print("Top articles without own likes: ")
+                display.display(df_without_own_likes.head(20 if k is None else k))
+
+            top_results = df_without_own_likes['article_id'].head(20).values if exclude_read else df['article_id'].head(20).values
 
             articles_to_recommend = []
             if more_like_this:
+                print("With more like this \n")
                 articles_to_recommend = find_articles_like(top_results, 20, 50, language_id)
-                #print("this is what elastic thinks \n")
             else:
-                #print("This is cf")
+                print("Only CF \n")
                 for article_id in top_results:
-                    
                     articles_to_recommend.append(Article.find_by_id(article_id))
-            """ for article in articles_to_recommend:
-                print(article.title, article.language, article.published_time) """
             return articles_to_recommend
         else:
             # Possibly do elastic stuff to just give some random recommendations

@@ -23,9 +23,9 @@ class CFModel():
         sessions : pd.DataFrame,
         num_users: int,
         num_items: int,
-        embedding_dim : int =20,
-        test=False,
-        stddev=0.1,
+        embedding_dim,
+        test,
+        stddev,
     ):
         self.num_users = num_users
         self.num_items = num_items
@@ -35,7 +35,7 @@ class CFModel():
         self.stddev=stddev
         self.set_embeddings()
 
-    def split_dataframe(self, df: pd.DataFrame, holdout_fraction : float =0.2   ):
+    def split_dataframe(self, df: pd.DataFrame, holdout_fraction : float =0.05   ):
         """Splits a DataFrame into training and test sets.
         Args:
             df: a dataframe.
@@ -67,7 +67,7 @@ class CFModel():
         loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
         return loss
 
-    def build_loss(self, regularization_coeff=.1, gravity_coeff=1.):
+    def build_loss(self, regularization_coeff=0.5, gravity_coeff=1.):
         """
         Args:
             ratings: the DataFrame of movie ratings.
@@ -95,8 +95,8 @@ class CFModel():
         gravity_loss = gravity_coeff * gravity(user_embeddings, article_embeddings)
         regularization_loss = regularization_coeff * (
             # The Colab notebook just summed the values of each embedding vector. Normally, the norm of a vector is calculated using the formula for Euclidian norm.
-            # tf.reduce_sum(user_embeddings * user_embeddings) / user_embeddings.shape[0].value + tf.reduce_sum(article_embeddings * article_embeddings) / article_embeddings.shape[0].value)
-            tf.norm(user_embeddings*user_embeddings)/user_embeddings.shape[0].value + tf.norm(article_embeddings*article_embeddings)/article_embeddings.shape[0].value)
+            tf.reduce_sum(user_embeddings * user_embeddings) / user_embeddings.shape[0].value + tf.reduce_sum(article_embeddings * article_embeddings) / article_embeddings.shape[0].value)
+            #tf.norm(user_embeddings*user_embeddings)/user_embeddings.shape[0].value + tf.norm(article_embeddings*article_embeddings)/article_embeddings.shape[0].value)
         total_loss = error_train + regularization_loss + gravity_loss
 
         losses = {
