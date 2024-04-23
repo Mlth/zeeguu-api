@@ -24,8 +24,11 @@ print("setting up config")
 if(fresh):
     remove_saved_embeddings_and_mappings()
 
+data_since = datetime.now() - timedelta(days=365)
+#data_since = None
+
 start = time.time()
-mapper = Mapper()
+mapper = Mapper(data_since=data_since)
 
 num_users = mapper.num_users
 num_items = mapper.num_articles
@@ -36,6 +39,7 @@ print("Time to set up mapper: ", time.time() - start)
 start = time.time()
 matrix_config = FeedbackMatrixConfig(
     show_data=[ShowData.LIKED, ShowData.RATED_DIFFICULTY],
+    data_since=data_since,
     adjustment_config=AdjustmentConfig(
         difficulty_weight=2,
         translation_adjustment_value=1
@@ -54,7 +58,7 @@ sessions_df = matrix.liked_sessions_df
 if test:
     recommender = RecommenderSystem(sessions_df, mapper=mapper,num_users=1000, num_items=1000, generator_function=setup_sessions_4_categories_with_noise)
 else:
-    recommender = RecommenderSystem(sessions=sessions_df, num_users=num_users, num_items=num_items, mapper=mapper, embedding_dim=10)
+    recommender = RecommenderSystem(sessions=sessions_df, num_users=num_users, num_items=num_items, data_since=data_since, mapper=mapper, embedding_dim=10)
 print("Time to set up recommender: ", time.time() - start)
 
 start = time.time()

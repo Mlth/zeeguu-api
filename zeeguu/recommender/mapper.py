@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import os
 
 from pandas import DataFrame
@@ -16,11 +17,12 @@ class Mapper:
     num_articles = 0
     max_article_id = None
 
-    def __init__(self):
+    def __init__(self, data_since: datetime = None):
         self.user_order_to_id = {}
         self.user_id_to_order = {}
         self.article_order_to_id = {}
         self.article_id_to_order = {}
+        self.data_since = data_since
 
         self.set_user_order_to_id()
         self.set_article_order_to_id()
@@ -31,10 +33,27 @@ class Mapper:
             self.article_id_to_order = pickle.load(open(article_id_to_order_path, 'rb'))
             self.article_order_to_id = pickle.load(open(article_order_to_id_path, 'rb'))
             self.num_articles = len(self.article_order_to_id)
-            self.max_article_id = max(self.article_id_to_order.keys())
+            self.max_article_id = list(self.article_id_to_order.keys())[-1]
         else:
             print("No article mappings found. Building new mappings.")
-            articles = Article.query.filter(Article.broken != 1).order_by(Article.id).all()
+            article_query = (
+                Article
+                    .query
+                    .filter(Article.broken != 1)
+                    .order_by(Article.id)
+            )
+            '''
+            if self.data_since:
+                article_query = article_query.filter(Article.published_time > self.data_since)
+            print("Data since: ")
+            print(self.data_since)
+            print("Article query: ")
+            print(article_query)
+            articles = article_query.all()
+            print("Articles: ")
+            print(articles.head(10))
+            '''
+            articles = article_query.all()
             index = 0
             for article in articles:
                 self.article_order_to_id[index] = article.id
@@ -58,7 +77,7 @@ class Mapper:
             self.num_users = len(self.user_order_to_id)
         else:
             print("No user mappings found. Building new mappings.")
-            users = User.query.filter(User.is_dev == False).all()
+            users = User.query.filter(User.is_dev != True).all()
             index = 0
             for user in users:
                 self.user_order_to_id[index] = user.id

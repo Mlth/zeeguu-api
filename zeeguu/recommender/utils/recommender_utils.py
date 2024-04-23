@@ -118,7 +118,6 @@ def add_filters_to_query(query, show_data: 'list[ShowData]'):
             query = query.filter(or_(*or_filters))
     return query
 
-
 def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' = []):
     print("Getting all user reading sessions")
     liked_dict = {}
@@ -128,6 +127,7 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
             .join(User, User.id == UserReadingSession.user_id)
             .join(Article, Article.id == UserReadingSession.article_id)
             .filter(Article.broken == 0)
+            .filter(User.is_dev != True)
             .filter(UserReadingSession.article_id.isnot(None))
             .order_by(UserReadingSession.user_id.asc())
             #.filter(User.is_dev != True)
@@ -248,16 +248,17 @@ def setup_df_rs(num_items : int) -> pd.DataFrame:
     articles = pd.merge(all_null_df, articles, on='id', how='left', validate="many_to_many")
     return articles
 
-def get_recommendable_articles(since_date: datetime=None, lowest_id=None) -> pd.DataFrame:
+def get_recommendable_articles(since_date: datetime=None, lowest_id: int=None) -> pd.DataFrame:
     '''Fetches all the valid articles that a user can be recommended'''
     query = f"""
-        Select distinct a.id, a.title, a.language_id
+        Select distinct a.id, a.title, a.language_id, a.published_time
         from article a
         join user_article ua on a.id = ua.article_id
-        where broken = 0 {f'and ua.opened > {since_date.timestamp()}' if since_date is not None else ''}
-    """
+        where broken = 0"""
+    if since_date:
+        query += f" and a.published_time > '{since_date.strftime('%Y-%m-%d')}'"
     if lowest_id:
-        query += f" and id > {lowest_id}"
+        query += f" and a.id > {lowest_id}"
     articles = pd.read_sql_query(query, db.engine)
     return articles
 

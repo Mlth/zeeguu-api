@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 import os
 import numpy as np
@@ -26,6 +27,7 @@ class RecommenderSystem:
         mapper: Mapper,
         num_users: int,
         num_items: int,
+        data_since: datetime = None,
         embedding_dim : int =20,
         generator_function: Callable=None, #function type
         stddev=0.1,
@@ -38,7 +40,7 @@ class RecommenderSystem:
             self.articles = generate_articles_with_titles(num_items)
         else:
             self.sessions = sessions
-            articles = get_recommendable_articles()
+            articles = get_recommendable_articles(since_date=data_since)
             self.articles = mapper.map_articles(articles)
         self.cf_model = CFModel(self.sessions, num_users, num_items, embedding_dim, self.test, stddev)
 
