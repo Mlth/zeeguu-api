@@ -97,7 +97,7 @@ def build_elastic_recommender_query(
         must_not.append(match("title", unwanted_user_topics))
 
     must.append(exists("published_time"))
-    if user_topics:
+    if topics:
         must.append({"terms": {"topics": array_of_lowercase_topics(topics)}})
 
     if not second_try:
@@ -110,9 +110,8 @@ def build_elastic_recommender_query(
                 }
             }
         )
-    
-    print("old:", old)
 
+    print("oldie", old)
     if old:
         bool_query_body["query"]["bool"].update(
             {
@@ -123,7 +122,7 @@ def build_elastic_recommender_query(
                                 "range": {
                                     "published_time": {
                                         "gte": (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%S'),
-                                        "lte": (datetime.now() - timedelta(days=21)).strftime('%Y-%m-%dT%H:%M:%S')
+                                        "lte": (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S')
                                     }
                                 }
                             }

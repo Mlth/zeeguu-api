@@ -126,7 +126,7 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
         UserReadingSession.query
             .join(User, User.id == UserReadingSession.user_id)
             .join(Article, Article.id == UserReadingSession.article_id)
-            .filter(Article.broken == 0)
+            .filter(Article.broken != 1)
             .filter(User.is_dev != True)
             .filter(UserReadingSession.article_id.isnot(None))
             .order_by(UserReadingSession.user_id.asc())
@@ -135,7 +135,11 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
             #.filter(UserReadingSession.duration <= 3600000) # 1 hour
     )
     if data_since:
-        query = query.filter(UserReadingSession.start_time >= data_since)
+        query = (
+            query
+            .filter(UserReadingSession.start_time >= data_since)
+            .filter(Article.published_time > data_since)
+        )
 
     if ShowData.LIKED in show_data:
         liked_dict = get_user_article_information(data_since)
@@ -254,7 +258,7 @@ def get_recommendable_articles(since_date: datetime=None, lowest_id: int=None) -
         Select distinct a.id, a.title, a.language_id, a.published_time
         from article a
         join user_article ua on a.id = ua.article_id
-        where broken = 0"""
+        where broken != 1"""
     if since_date:
         query += f" and a.published_time > '{since_date.strftime('%Y-%m-%d')}'"
     if lowest_id:

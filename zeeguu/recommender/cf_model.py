@@ -67,7 +67,7 @@ class CFModel():
         loss = tf.losses.mean_squared_error(sparse_sessions.values, predictions)
         return loss
 
-    def build_loss(self, regularization_coeff=0.75, gravity_coeff=1.):
+    def build_loss(self, regularization_coeff=0.7, gravity_coeff=1.):
         """
         Args:
             ratings: the DataFrame of movie ratings.

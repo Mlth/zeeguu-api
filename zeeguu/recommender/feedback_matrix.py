@@ -36,7 +36,7 @@ class FeedbackMatrixSession:
         self.days_since = days_since
 
 class AdjustmentConfig:
-    '''Adjustments made to a sessions depending on 
+    '''Adjustments made to the expected active duration of a session depending on 
     1. Variance in user fk and article fk
     2. Number of translated words in the article'''
     def __init__(self, difficulty_weight : int, translation_adjustment_value: int):
@@ -141,7 +141,7 @@ class FeedbackMatrix:
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
 
-            if True: #self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1 and sessions[session].days_since < 30):
+            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1): #and sessions[session].days_since < 30
                 have_read_sessions += 1
                 sessions[session].expected_read = 1
                 liked_sessions.append(sessions[session])
@@ -151,9 +151,9 @@ class FeedbackMatrix:
         
         negative_sampling_sessions = []
         for user_id in self.mapper.user_id_to_order.keys():
-            random_article_ids = random.sample(self.mapper.article_id_to_order.keys(), 10)
+            random_article_ids = random.sample(self.mapper.article_id_to_order.keys(), 2)
             valid_random_article_ids = [article_id for article_id in random_article_ids if (user_id, article_id) not in sessions]
-            negative_sampling_sessions = [
+            negative_sampling_sessions = negative_sampling_sessions + [
                 FeedbackMatrixSession(
                     user_id=user_id,
                     article_id=article_id,

@@ -1,4 +1,5 @@
 import time
+from zeeguu.core.elastic.indexing import index_all_articles
 from zeeguu.core.model import db
 from zeeguu.api.app import create_app
 from zeeguu.recommender.feedback_matrix import AdjustmentConfig, FeedbackMatrix, FeedbackMatrixConfig
@@ -20,7 +21,6 @@ fresh = False
 
 print("setting up config")
 
-
 if(fresh):
     remove_saved_embeddings_and_mappings()
 
@@ -29,6 +29,7 @@ data_since = datetime.now() - timedelta(days=365)
 
 start = time.time()
 mapper = Mapper(data_since=data_since)
+
 
 num_users = mapper.num_users
 num_items = mapper.num_articles
@@ -49,6 +50,7 @@ matrix_config = FeedbackMatrixConfig(
 
 matrix = FeedbackMatrix(matrix_config, mapper, num_users=num_users, num_articles=num_items)
 matrix.generate_dfs()
+matrix.plot_sessions_df('liked_sessions_df')
 print("Time to generate dfs: ", time.time() - start)
 
 start = time.time()
@@ -62,7 +64,7 @@ else:
 print("Time to set up recommender: ", time.time() - start)
 
 start = time.time()
-recommender.cf_model.train_model(num_iterations=10000, learning_rate=0.1)
+recommender.cf_model.train_model(num_iterations=30000, learning_rate=0.1)
 print("Time to train model: ", time.time() - start)
 
 start = time.time()
@@ -70,7 +72,7 @@ start = time.time()
 if(test):
     recommender.user_recommendations(user_id=1, language_id=1)
 else:
-    recommender.user_recommendations(user_id=4512, language_id=2,more_like_this=False)
+    recommender.user_recommendations(user_id=4557, language_id=2,more_like_this=False)
 
 print("Time to get recommendations: ", time.time() - start)
 

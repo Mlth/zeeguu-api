@@ -20,7 +20,7 @@ def build_liked_sparse_tensor(liked_sessions_df, num_of_users, num_of_articles):
         dense_shape=[num_of_users, num_of_articles]
     )
 
-    # This prints the indices and values of the tensor
+    # Uncomment if you want to see indices and values
     '''
     with tf.Session() as sess:
         indices_val = sess.run(tensor.indices)

@@ -42,17 +42,8 @@ class Mapper:
                     .filter(Article.broken != 1)
                     .order_by(Article.id)
             )
-            '''
             if self.data_since:
                 article_query = article_query.filter(Article.published_time > self.data_since)
-            print("Data since: ")
-            print(self.data_since)
-            print("Article query: ")
-            print(article_query)
-            articles = article_query.all()
-            print("Articles: ")
-            print(articles.head(10))
-            '''
             articles = article_query.all()
             index = 0
             for article in articles:
