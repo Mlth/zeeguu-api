@@ -90,13 +90,6 @@ class RecommenderSystem:
                 'language_id': valid_articles['language_id'],
                 #'titles': valid_articles['title'],
             })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
-            '''if exclude_read:
-                # remove articles that have already been read
-                if self.sessions is not None:
-                    read_articles = self.sessions[self.sessions.user_id == user_order]["article_id"].values
-                else:
-                    read_articles = []
-                df = df[df.article_id.apply(lambda article_id: article_id not in read_articles)]'''
             if not self.test:
                 df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
             #df = df.sort_values([score_key], ascending=False)
@@ -105,7 +98,7 @@ class RecommenderSystem:
             display.display(df.head(len(df) if k is None else k))
 
             if exclude_read:
-                own_likes = UserArticle.all_liked_articles_of_user_by_id(user_id)
+                own_likes = UserArticle.all_articles_of_user(user_id)
                 list_of_own_likes = [id.article.id for id in own_likes]
                 df_without_own_likes = df[~df['article_id'].isin(list_of_own_likes)]
                 print("Top articles without own likes: ")
@@ -127,7 +120,6 @@ class RecommenderSystem:
             return
 
     def previous_likes(self, user_id: int, language_id: int):
-
         query = UserArticle.all_liked_articles_of_user_by_id(user_id)
         
         user_likes = []
@@ -137,8 +129,6 @@ class RecommenderSystem:
         
         articles_to_recommend = find_articles_like(user_likes, 20, 50, language_id)
         return articles_to_recommend
-        
-
 
     def article_neighbors(self, article_id, measure=Measure.DOT, k=10):
         scores = self.compute_scores(

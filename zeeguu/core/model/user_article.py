@@ -175,9 +175,13 @@ class UserArticle(db.Model):
         return (
             cls.query
             .filter(UserArticle.user_id == user_id)
-            .filter(UserArticle.liked.isnot(False))
+            .filter(UserArticle.liked == True)
             .all()
         )
+
+    @classmethod
+    def all_articles_of_user(cls, user_id):
+        return cls.query.filter(UserArticle.user_id == user_id).all()
     
     @classmethod
     def all_starred_or_liked_articles_of_user(cls, user, limit=30):

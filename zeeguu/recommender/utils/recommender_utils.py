@@ -137,7 +137,7 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
     if data_since:
         query = (
             query
-            .filter(UserReadingSession.start_time >= data_since)
+            .filter(UserReadingSession.start_time > data_since)
             .filter(Article.published_time > data_since)
         )
 

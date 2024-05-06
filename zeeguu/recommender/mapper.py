@@ -15,8 +15,7 @@ article_id_to_order_path = f"{mappings_path}article_id_mapping.pkl"
 class Mapper:
     num_users = 0
     num_articles = 0
-    max_article_id = None
-
+    
     def __init__(self, data_since: datetime = None):
         self.user_order_to_id = {}
         self.user_id_to_order = {}
@@ -24,16 +23,15 @@ class Mapper:
         self.article_id_to_order = {}
         self.data_since = data_since
 
-        self.set_user_order_to_id()
-        self.set_article_order_to_id()
+        self.__set_user_order_to_id()
+        self.__set_article_order_to_id()
 
-    def set_article_order_to_id(self):
+    def __set_article_order_to_id(self):
         if os.path.exists(article_order_to_id_path) and os.path.exists(article_id_to_order_path):
             print("Loading article mappings from files.")
             self.article_id_to_order = pickle.load(open(article_id_to_order_path, 'rb'))
             self.article_order_to_id = pickle.load(open(article_order_to_id_path, 'rb'))
             self.num_articles = len(self.article_order_to_id)
-            self.max_article_id = list(self.article_id_to_order.keys())[-1]
         else:
             print("No article mappings found. Building new mappings.")
             article_query = (
@@ -43,7 +41,7 @@ class Mapper:
                     .order_by(Article.id)
             )
             if self.data_since:
-                article_query = article_query.filter(Article.published_time > self.data_since)
+                article_query = article_query.filter(Article.published_time >= self.data_since)
             articles = article_query.all()
             index = 0
             for article in articles:
@@ -51,7 +49,6 @@ class Mapper:
                 self.article_id_to_order[article.id] = index
                 index += 1
             self.num_articles = index
-            self.max_article_id = articles[-1].id
 
             if not (os.path.exists(mappings_path)):
                 os.makedirs(mappings_path)
@@ -60,7 +57,7 @@ class Mapper:
             with open(article_id_to_order_path, 'wb') as f:
                 pickle.dump(self.article_id_to_order, f)
 
-    def set_user_order_to_id(self):
+    def __set_user_order_to_id(self):
         if os.path.exists(user_order_to_id_path) and os.path.exists(user_id_to_order_path):
             print("Loading user mappings from files.")
             self.user_id_to_order = pickle.load(open(user_id_to_order_path, 'rb'))

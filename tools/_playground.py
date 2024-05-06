@@ -33,7 +33,6 @@ mapper = Mapper(data_since=data_since)
 
 num_users = mapper.num_users
 num_items = mapper.num_articles
-max_article_id = mapper.max_article_id
 
 print("Time to set up mapper: ", time.time() - start)
 
@@ -57,6 +56,9 @@ start = time.time()
 #sessions_df = pd.concat([matrix.liked_sessions_df, matrix.negative_sampling_df], ignore_index=True)
 sessions_df = matrix.liked_sessions_df
 
+print("printing sessions_df")
+print(len(sessions_df))
+
 if test:
     recommender = RecommenderSystem(sessions_df, mapper=mapper,num_users=1000, num_items=1000, generator_function=setup_sessions_4_categories_with_noise)
 else:
@@ -64,15 +66,17 @@ else:
 print("Time to set up recommender: ", time.time() - start)
 
 start = time.time()
-recommender.cf_model.train_model(num_iterations=30000, learning_rate=0.1)
+#recommender.cf_model.train_model(num_iterations=1, learning_rate=0.1)
+recommender.cf_model.train_model(num_iterations=50000, learning_rate=0.1)
 print("Time to train model: ", time.time() - start)
 
 start = time.time()
 
-if(test):
+'''if(test):
     recommender.user_recommendations(user_id=1, language_id=1)
 else:
     recommender.user_recommendations(user_id=4557, language_id=2,more_like_this=False)
+'''
 
 print("Time to get recommendations: ", time.time() - start)
 
