@@ -111,7 +111,6 @@ def build_elastic_recommender_query(
             }
         )
 
-    print("oldie", old)
     if old:
         bool_query_body["query"]["bool"].update(
             {
