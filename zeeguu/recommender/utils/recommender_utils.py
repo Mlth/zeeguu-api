@@ -260,7 +260,7 @@ def get_recommendable_articles(since_date: datetime=None, lowest_id: int=None) -
         join user_article ua on a.id = ua.article_id
         where broken != 1"""
     if since_date:
-        query += f" and a.published_time > '{since_date.strftime('%Y-%m-%d')}'"
+        query += f" and a.published_time > '{since_date.strftime('%Y-%m-%dT%H:%M:%S')}'"
     if lowest_id:
         query += f" and a.id > {lowest_id}"
     articles = pd.read_sql_query(query, db.engine)
@@ -274,7 +274,6 @@ def filter_article_embeddings(embeddings, article_ids):
         embeddings_result = tf.nn.embedding_lookup(embeddings, [5])
         
         embeddings_array = embeddings_result.eval()'''
-    
     return embeddings[article_ids]
 
 def setup_df_correct(num_items : int) -> pd.DataFrame:

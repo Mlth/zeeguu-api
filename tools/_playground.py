@@ -66,7 +66,7 @@ else:
 print("Time to set up recommender: ", time.time() - start)
 
 start = time.time()
-recommender.cf_model.train_model(num_iterations=5, learning_rate=0.1)
+recommender.cf_model.train_model(num_iterations=200, learning_rate=0.1)
 print("Time to train model: ", time.time() - start)
 
 start = time.time()
