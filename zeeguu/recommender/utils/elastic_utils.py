@@ -14,7 +14,6 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
     ]
 
     cutoff_date = datetime.now() - timedelta(days=article_age)
-    testing_date = datetime.strptime("2024-04-04 12:00:00", "%Y-%m-%d %H:%M:%S")
 
     mlt_query = {
         "query": {
@@ -52,7 +51,7 @@ def find_articles_like(recommended_articles_ids: 'list[int]', limit: int, articl
                 }, "functions": [
                         {"gauss": {
                             "published_time": {
-                                "origin": testing_date,
+                                "origin": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
                                 "scale": "10d",
                                 "offset": "4h",
                                 "decay": 0.9

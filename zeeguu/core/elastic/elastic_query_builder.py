@@ -95,7 +95,7 @@ def build_elastic_recommender_query(
         must_not.append(match("title", unwanted_user_topics))
 
     must.append(exists("published_time"))
-    if user_topics:
+    if topics:
         must.append({"terms": {"topics": array_of_lowercase_topics(topics)}})
 
     if not second_try:

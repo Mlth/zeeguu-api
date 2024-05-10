@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import os
 
 from pandas import DataFrame
@@ -14,17 +15,18 @@ article_id_to_order_path = f"{mappings_path}article_id_mapping.pkl"
 class Mapper:
     num_users = 0
     num_articles = 0
-
-    def __init__(self):
+    
+    def __init__(self, data_since: datetime = None):
         self.user_order_to_id = {}
         self.user_id_to_order = {}
         self.article_order_to_id = {}
         self.article_id_to_order = {}
+        self.data_since = data_since
 
-        self.set_user_order_to_id()
-        self.set_article_order_to_id()
+        self.__set_user_order_to_id()
+        self.__set_article_order_to_id()
 
-    def set_article_order_to_id(self):
+    def __set_article_order_to_id(self):
         if os.path.exists(article_order_to_id_path) and os.path.exists(article_id_to_order_path):
             print("Loading article mappings from files.")
             self.article_id_to_order = pickle.load(open(article_id_to_order_path, 'rb'))
@@ -32,7 +34,15 @@ class Mapper:
             self.num_articles = len(self.article_order_to_id)
         else:
             print("No article mappings found. Building new mappings.")
-            articles = Article.query.filter(Article.broken != 1).all()
+            article_query = (
+                Article
+                    .query
+                    .filter(Article.broken != 1)
+                    .order_by(Article.id)
+            )
+            if self.data_since:
+                article_query = article_query.filter(Article.published_time >= self.data_since)
+            articles = article_query.all()
             index = 0
             for article in articles:
                 self.article_order_to_id[index] = article.id
@@ -47,7 +57,7 @@ class Mapper:
             with open(article_id_to_order_path, 'wb') as f:
                 pickle.dump(self.article_id_to_order, f)
 
-    def set_user_order_to_id(self):
+    def __set_user_order_to_id(self):
         if os.path.exists(user_order_to_id_path) and os.path.exists(user_id_to_order_path):
             print("Loading user mappings from files.")
             self.user_id_to_order = pickle.load(open(user_id_to_order_path, 'rb'))
@@ -55,7 +65,7 @@ class Mapper:
             self.num_users = len(self.user_order_to_id)
         else:
             print("No user mappings found. Building new mappings.")
-            users = User.query.filter(User.is_dev == False).all()
+            users = User.query.filter(User.is_dev != True).all()
             index = 0
             for user in users:
                 self.user_order_to_id[index] = user.id
