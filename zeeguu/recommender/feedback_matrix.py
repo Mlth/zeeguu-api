@@ -175,6 +175,7 @@ class FeedbackMatrix:
         df = self.__session_map_to_df(sessions)
         if self.config.test_tensor:
             liked_df = self.__session_list_to_df([FeedbackMatrixSession(1, 1, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(1, 5, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 5, 100, 5, 5, 100, [1], 1, 1, 1, 20)])
+            negative_sampling_df = self.__session_list_to_df([FeedbackMatrixSession(1, 2, 1, 1, 1, 1, [1], 1, 1, 1, 1), FeedbackMatrixSession(2, 3, 1, 1, 1, 1, [1], 1, 1, 1, 1)])
         else:
             for i in range(len(liked_sessions)):
                 liked_sessions[i].user_id = self.mapper.user_id_to_order.get(liked_sessions[i].user_id)
