@@ -14,7 +14,7 @@ def visualize_tensor(tensor, name):
 
     name = os.path.join(get_resource_path(), name + '.png')
     plt.figure(figsize=(10, 8))
-    plt.imshow(tensor, cmap='viridis', aspect='auto')
+    plt.imshow(tensor, cmap='inferno', aspect='auto')
     plt.colorbar(label='Value')
     plt.title('Mock Tensor')
     plt.xlabel('Article ID')
