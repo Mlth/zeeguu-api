@@ -20,8 +20,8 @@ class SessionVisualizer:
         if have_read_sessions > 0:
             have_read_ratio = have_read_sessions / sessions_count * 100
             have_not_read_ratio = 100 - have_read_ratio
-            legend.append(plt.Line2D([0], [0], marker='', label=f"Expected read: {have_read_ratio:.2f}% ({have_read_sessions} sessions)"))
-            legend.append(plt.Line2D([0], [0], marker='', label=f"Expected not read: {have_not_read_ratio:.2f}% ({sessions_count - have_read_sessions} sessions)"))
+            legend.append(plt.Line2D([0], [0], marker='', label=f"Liked within range: {have_read_ratio:.2f}% ({have_read_sessions} sessions)"))
+            legend.append(plt.Line2D([0], [0], marker='', label=f"Liked outside of range: {have_not_read_ratio:.2f}% ({sessions_count - have_read_sessions} sessions)"))
 
         if len(show_data) == 0:
             self.add_entire_legend(legend)
@@ -46,12 +46,12 @@ class SessionVisualizer:
         legend.append(plt.Line2D([0], [0], marker='o', color='b', label='blue = ok'))
         legend.append(plt.Line2D([0], [0], marker='o', color='k', label='black = difficult'))
 
-    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, show_data: List[ShowData], data_since):
+    def plot_urs_with_duration_and_word_count(self, df, have_read_sessions, file_name, show_data: List[ShowData], data_since, have_liked_sessions):
         plt.clf()
         if len(df) == 0:
             print("No data to plot")
             return
-        
+        df = df[df['liked'] != None]
         x_min, x_max = 0, 2000
         y_min, y_max = 0, 2000
 
@@ -59,8 +59,9 @@ class SessionVisualizer:
         plt.ylabel('Estimated reading time (seconds)')
 
         expected_read_color = np.where(df['liked'] == 1, 'green', 
-                                    np.where(df['difficulty_feedback'] != 0, self.get_diff_color(df, True),
+                                    np.where(df['liked'] == 0, self.get_diff_color(df, True),
                                         'red'))
+        
         plt.scatter(df['word_count'], df['session_duration'], alpha=[days_since_normalizer(d) for d in df['days_since']], color=expected_read_color)
 
         x_values = df['word_count']
@@ -76,7 +77,7 @@ class SessionVisualizer:
         plt.grid(True)
         plt.rc('axes', axisbelow=True)
 
-        self.add_legend(show_data, have_read_sessions, len(df))
+        self.add_legend(show_data, have_liked_sessions, len(df))
 
         title_string = "User reading sessions"
         if data_since:

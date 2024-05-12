@@ -58,6 +58,7 @@ class FeedbackMatrix:
     sessions_df = None
     liked_sessions_df = None
     have_read_sessions = None
+    have_liked_sessions = None
     feedback_diff_list_toprint = None
     feedback_counter = 0
 
@@ -82,7 +83,7 @@ class FeedbackMatrix:
             if (user_id, article_id) in liked_data:
                 liked_value = liked_data[(user_id, article_id)]
             else:
-                liked_value = 0
+                liked_value = None
             
             if (user_id, article_id) in difficulty_feedback_data:
                 difficulty_feedback = difficulty_feedback_data[(user_id, article_id)]
@@ -124,6 +125,7 @@ class FeedbackMatrix:
         liked_sessions = []
         feedback_diff_list = []
         have_read_sessions = 0
+        have_liked_sessions = 0
         translate_data = get_sum_of_translation_from_user_activity_data(self.config.data_since)
 
         if self.config.adjustment_config is None:
@@ -141,6 +143,9 @@ class FeedbackMatrix:
             should_spend_reading_lower_bound = get_expected_reading_time(sessions[session].word_count, upper_bound_reading_speed)
             should_spend_reading_upper_bound = get_expected_reading_time(sessions[session].word_count, lower_bound_reading_speed)
 
+            #if sessions[session].liked == 0:
+
+
             if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) or (sessions[session].liked == 1): #and sessions[session].days_since < 30
                 have_read_sessions += 1
                 sessions[session].expected_read = 1
@@ -148,6 +153,8 @@ class FeedbackMatrix:
                 feedback_diff_list.append(sessions[session].difficulty_feedback)
             if self.duration_is_within_bounds(sessions[session].original_session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound):
                 sessions[session].original_expected_read = 1
+            if self.duration_is_within_bounds(sessions[session].session_duration, should_spend_reading_lower_bound, should_spend_reading_upper_bound) and (sessions[session].liked == 1):
+                have_liked_sessions += 1
         
         negative_sampling_sessions = []
         for user_id in self.mapper.user_id_to_order.keys():
@@ -169,7 +176,7 @@ class FeedbackMatrix:
                 ) for article_id in valid_random_article_ids
             ]
 
-        return sessions, liked_sessions, have_read_sessions, feedback_diff_list, negative_sampling_sessions
+        return sessions, liked_sessions, have_read_sessions, feedback_diff_list, negative_sampling_sessions, have_liked_sessions
 
     def get_translation_adjustment(self, session: FeedbackMatrixSession, adjustment_value):
         timesTranslated = UserActivityData.translated_words_for_article(session.user_id, session.article_id)
@@ -179,7 +186,7 @@ class FeedbackMatrix:
         return duration <= upper and duration >= lower
 
     def generate_dfs(self):
-        sessions, liked_sessions, have_read_sessions, feedback_diff_list, negative_sampling_sessions = self.get_sessions()
+        sessions, liked_sessions, have_read_sessions, feedback_diff_list, negative_sampling_sessions, have_liked_sessions = self.get_sessions()
 
         df = self.__session_map_to_df(sessions)
         if self.config.test_tensor:
@@ -202,6 +209,7 @@ class FeedbackMatrix:
         self.have_read_sessions = have_read_sessions
         self.feedback_diff_list_toprint = feedback_diff_list
         self.negative_sampling_df = negative_sampling_df
+        self.have_liked_sessions = have_liked_sessions
 
     def __session_map_to_df(self, sessions: 'dict[tuple[int, int], FeedbackMatrixSession]'):
         data = {index: vars(session) for index, session in sessions.items()}
@@ -224,7 +232,7 @@ class FeedbackMatrix:
 
     def plot_sessions_df(self, name):
         print("Plotting sessions. Saving to file: " + name + ".png")
-        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name, self.config.show_data, self.config.data_since)
+        self.visualizer.plot_urs_with_duration_and_word_count(self.sessions_df, self.have_read_sessions, name, self.config.show_data, self.config.data_since, self.have_liked_sessions)
 
     def visualize_tensor(self, file_name='tensor'):
         print("Visualizing tensor")

@@ -24,7 +24,9 @@ print("setting up config")
 if(fresh):
     remove_saved_embeddings_and_mappings()
 
-data_since = datetime.now() - timedelta(days=365)
+#data_since = datetime.now() - timedelta(days=49)
+data_since = datetime(2024, 3, 14)
+
 #data_since = None
 
 start = time.time()
@@ -39,10 +41,10 @@ print("Time to set up mapper: ", time.time() - start)
 
 start = time.time()
 matrix_config = FeedbackMatrixConfig(
-    show_data=[ShowData.LIKED, ShowData.RATED_DIFFICULTY],
+    show_data=[ShowData.LIKED],
     data_since=data_since,
     adjustment_config=AdjustmentConfig(
-        difficulty_weight=2,
+        difficulty_weight=1,
         translation_adjustment_value=1
     ),
     test_tensor=test
@@ -52,7 +54,7 @@ matrix = FeedbackMatrix(matrix_config, mapper, num_users=num_users, num_articles
 matrix.generate_dfs()
 matrix.plot_sessions_df('liked_sessions_df')
 print("Time to generate dfs: ", time.time() - start)
-
+""" 
 start = time.time()
 #sessions_df = pd.concat([matrix.liked_sessions_df, matrix.negative_sampling_df], ignore_index=True)
 sessions_df = matrix.liked_sessions_df
@@ -76,4 +78,4 @@ else:
 
 print("Time to get recommendations: ", time.time() - start)
 
-print("Ending playground")
+print("Ending playground") """

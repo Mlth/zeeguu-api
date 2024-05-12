@@ -135,10 +135,12 @@ def get_user_reading_sessions(data_since: datetime, show_data: 'list[ShowData]' 
             #.filter(UserReadingSession.duration <= 3600000) # 1 hour
     )
     if data_since:
+        #data_from = datetime(2022,3,12)
         query = (
             query
             .filter(UserReadingSession.start_time >= data_since)
             .filter(Article.published_time > data_since)
+            #.filter(UserReadingSession.start_time <= data_from)
         )
 
     if ShowData.LIKED in show_data:
@@ -171,13 +173,14 @@ def get_user_article_information(data_since: datetime):
     query = (
         UserArticle.query
             .filter(UserArticle.opened.isnot(None))
-            .filter(UserArticle.liked == True)
+            .filter(UserArticle.liked)
     )
     if data_since:
         query = query.filter(UserArticle.opened >= data_since)
     
     for row in query.all():
-        liked_dict[(row.user_id, row.article_id)] = 1
+        print(f"This is liked {row.liked}")
+        liked_dict[(row.user_id, row.article_id)] = row.liked
 
     return liked_dict
 
