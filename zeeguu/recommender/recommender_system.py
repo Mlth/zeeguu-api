@@ -18,6 +18,11 @@ from zeeguu.recommender.mock.generators_mock import generate_articles_with_title
 from zeeguu.recommender.visualization.model_visualizer import ModelVisualizer
 from zeeguu.recommender.utils.elastic_utils import find_articles_like
 
+'''
+    Parts of the following code is based on code from Google's Advanced Recommender System course:
+    https://developers.google.com/machine-learning/recommendation/labs/movie-rec-programming-exercise
+'''
+
 class RecommenderSystem:
     visualizer = ModelVisualizer()
 

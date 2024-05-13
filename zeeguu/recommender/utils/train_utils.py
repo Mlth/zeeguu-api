@@ -8,6 +8,11 @@ from zeeguu.recommender.utils.recommender_utils import import_tf
 
 tf = import_tf()
 
+'''
+  Parts of the following code is based on code from Google's Advanced Recommender System course:
+  https://developers.google.com/machine-learning/recommendation/labs/movie-rec-programming-exercise
+'''
+
 embeddings_path = "./zeeguu/recommender/embeddings/"
 user_embeddings_path = f"{embeddings_path}user_embedding.npy"
 article_embeddings_path = f"{embeddings_path}article_embedding.npy"

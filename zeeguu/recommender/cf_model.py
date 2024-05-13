@@ -15,6 +15,11 @@ tf = tf.compat.v1
 tf.disable_v2_behavior()
 tf.logging.set_verbosity(tf.logging.ERROR)
 
+'''
+    Parts of the following code is based on code from Google's Advanced Recommender System course:
+    https://developers.google.com/machine-learning/recommendation/labs/movie-rec-programming-exercise
+'''
+
 class CFModel():
     embeddings = None
 
