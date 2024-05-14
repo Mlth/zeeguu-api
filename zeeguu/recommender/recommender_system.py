@@ -93,11 +93,9 @@ class RecommenderSystem:
                 score_key: list(scores),
                 'article_id': valid_articles['id'],
                 'language_id': valid_articles['language_id'],
-                #'titles': valid_articles['title'],
-            })#.dropna(subset=["titles"]) # dopna no longer needed because we filter in the articles that we save in the RecommenderSystem itself.
+            })
             if not self.test:
                 df['article_id'] = df['article_id'].map(self.mapper.article_order_to_id)
-            #df = df.sort_values([score_key], ascending=False)
             df = df.iloc[df[score_key].apply(lambda x: abs(x - 1)).argsort()]
             print("Top articles with own likes: ")
             display.display(df.head(len(df) if k is None else k))

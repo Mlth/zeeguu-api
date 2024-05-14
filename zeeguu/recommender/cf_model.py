@@ -60,9 +60,9 @@ class CFModel():
             user_embeddings: A dense Tensor U of shape [N, k] where k is the embedding
             dimension, such that U_i is the embedding of user i.
             article_embeddings: A dense Tensor V of shape [M, k] where k is the embedding
-            dimension, such that V_j is the embedding of movie j.
+            dimension, such that V_j is the embedding of article j.
         Returns:
-            A scalar Tensor representing the MSE between the true ratings and the
+            A scalar Tensor representing the MSE between the true observations and the
             model's predictions.
         """
         predictions = tf.reduce_sum(
@@ -75,7 +75,7 @@ class CFModel():
     def build_loss(self, regularization_coeff=0.7, gravity_coeff=1.):
         """
         Args:
-            ratings: the DataFrame of movie ratings.
+            ratings: the DataFrame of article ratings.
             embedding_dim: The dimension of the embedding space.
             regularization_coeff: The regularization coefficient lambda.
             gravity_coeff: The gravity regularization coefficient lambda_g.
@@ -99,9 +99,7 @@ class CFModel():
         error_test = self.sparse_mean_square_error(A_test, user_embeddings, article_embeddings)
         gravity_loss = gravity_coeff * gravity(user_embeddings, article_embeddings)
         regularization_loss = regularization_coeff * (
-            # The Colab notebook just summed the values of each embedding vector. Normally, the norm of a vector is calculated using the formula for Euclidian norm.
             tf.reduce_sum(user_embeddings * user_embeddings) / user_embeddings.shape[0].value + tf.reduce_sum(article_embeddings * article_embeddings) / article_embeddings.shape[0].value)
-            #tf.norm(user_embeddings*user_embeddings)/user_embeddings.shape[0].value + tf.norm(article_embeddings*article_embeddings)/article_embeddings.shape[0].value)
         total_loss = error_train + regularization_loss + gravity_loss
 
         losses = {
